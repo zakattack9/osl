@@ -2,39 +2,21 @@
 
 A research-backed, AI-assisted learning system for comprehension, retention, and transfer.
 
-## Quick Start
+## Quick Start Guide
 
-### 1. Setup Folder Structure
-
-```bash
-# Clone this repository
-git clone <your-repo-url> osl
-cd osl
-
-# Create directory structure
-mkdir -p obsidian/{00_inbox,10_books,20_synthesis,30_projects_transfer,90_templates}
-mkdir -p anki/{exports,media}
-mkdir -p ai_state/{session_logs,memory,archive}
-mkdir -p scripts config/templates
-
-# Move docs to proper location
-mkdir -p docs
-mv "V3 Core.md" docs/V3_Core.md
-mv "V3 Implementation Guide.md" docs/V3_Implementation_Guide.md
-```
-
-### 2. Configure Obsidian
+### 1. Open Obsidian Vault
 
 1. Open Obsidian
 2. Select "Open folder as vault"
 3. Navigate to `osl/obsidian/`
-4. Obsidian will create `.obsidian/` folder automatically
+4. Start with a new book in `10_books/`
 
-### 3. Configure Anki
+### 2. Configure Anki
 
 1. Install [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code: 2055492159)
-2. Export existing decks to `osl/anki/exports/`
-3. Import decks from this location when needed
+2. Create a new deck named "OSL::Current"
+3. Import settings from `anki/deck_config.json`
+4. Enable FSRS scheduler in preferences
 
 ## Folder Structure
 
@@ -63,20 +45,36 @@ osl/
 
 ## Daily Workflow
 
-1. **Reading Session** (~45 min)
-   - Set learning intent
-   - Run micro-loops on 5-10 pages
-   - Create permanent notes
-   - Add ≤8 flashcards
+### Starting a New Book/Topic
 
-2. **Spaced Reviews** (10-15 min)
-   - Review Anki cards
-   - Export deck to `anki/exports/` after session
+1. Create folder: `obsidian/10_books/BookTitle/`
+2. Copy session template from `obsidian/90_templates/`
+3. Set 3 learning outcomes
+4. Write 5 curiosity questions
 
-3. **Weekly Synthesis** (60-90 min)
-   - Calibration test
-   - Write synthesis essay
-   - Update concept maps
+### Daily Reading Session (~45 min)
+
+1. **Micro-loops** (per 5-10 pages):
+   - Pick 1-3 guiding questions
+   - Read focused chunk
+   - Free recall (1-2 min)
+   - Write Feynman explanation
+   - Get AI feedback
+
+2. **Capture** (after reading):
+   - Create 2-5 permanent notes
+   - Add ≤8 high-yield flashcards
+   - Update session log
+
+3. **Review** (10-15 min):
+   - Complete Anki reviews
+   - Export deck after session
+
+### Weekly Tasks
+
+- **Synthesis** (Sun, 60-90 min): Essay + concept map
+- **Interleaving** (Tue/Thu, 20-30 min): Mix topics
+- **Calibration** (Sun): Test + predictions
 
 ## Git Backup
 

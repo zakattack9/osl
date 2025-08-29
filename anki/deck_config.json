@@ -1,0 +1,21 @@
+{
+  "name": "OSL_Settings",
+  "new": {
+    "delays": [10, 1440],
+    "ints": [1, 4],
+    "initialFactor": 2500,
+    "perDay": 8
+  },
+  "rev": {
+    "perDay": 100,
+    "ease4": 1.3,
+    "ivlFct": 1.0,
+    "maxIvl": 36500
+  },
+  "lapse": {
+    "delays": [10],
+    "mult": 0.8,
+    "minInt": 1,
+    "leechThreshold": 8
+  }
+}

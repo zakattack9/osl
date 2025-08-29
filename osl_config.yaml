@@ -24,3 +24,14 @@ governance:
   calibration_gate: 80  # Percent threshold
   card_debt_multiplier: 2.0
   max_new_cards_per_session: 8
+  interleaving_sessions_per_week: 2
+  
+spacing:
+  intervals: [1, 3, 7, 14, 30]  # Days
+  daily_review_time: 15  # Minutes
+  
+metrics:
+  track_retrieval_accuracy: true
+  track_prediction_calibration: true
+  track_misconceptions: true
+  track_time_to_artifact: true

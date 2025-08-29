@@ -1,0 +1,22 @@
+{
+  "last_updated": "",
+  "active_books": [],
+  "review_schedule": {
+    "next_interleaving": "",
+    "next_calibration": "",
+    "next_synthesis": "",
+    "next_project": ""
+  },
+  "performance_metrics": {
+    "7d_avg_retrieval": 0,
+    "7d_avg_prediction_accuracy": 0,
+    "current_card_debt_ratio": 0,
+    "daily_review_throughput": 0
+  },
+  "governance_status": {
+    "calibration_gate": "passing",
+    "card_debt_gate": "passing",
+    "transfer_gate": "passing",
+    "remediation_active": false
+  }
+}
