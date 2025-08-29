@@ -1,5 +1,6 @@
 <div align="center">
-<img src="./assets/learny.png" alt="Learny" width="200">
+<img src="./assets/learny.png" alt="Learny" width="200" style="margin-right: 24px;">
+<img src="./assets/osl.png" alt="Learny" width="350">
 </div>
 
 # Optimized System for Learning (OSL V3)
