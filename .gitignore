@@ -1,0 +1,31 @@
+# Obsidian
+obsidian/.obsidian/workspace*
+obsidian/.obsidian/cache
+obsidian/.obsidian/plugins/*/data.json
+obsidian/.trash/
+
+# Anki
+anki/exports/*.apkg
+anki/exports/*.colpkg
+anki/media/._*
+
+# AI State
+ai_state/archive/
+ai_state/session_logs/*_backup.json
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Large files
+*.mp4
+*.mov
+*.zip
+*.rar
+
+# Sensitive
+*_private.md
+*_personal.md
+config/secrets.yaml

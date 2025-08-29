@@ -1,0 +1,26 @@
+# OSL Configuration
+version: "3.0"
+
+paths:
+  obsidian_vault: "./obsidian"
+  anki_exports: "./anki/exports"
+  ai_state: "./ai_state"
+  session_logs: "./ai_state/session_logs"
+  
+anki:
+  profile: "OSL_User"  # Your Anki profile name
+  export_format: "apkg"
+  include_scheduling: false  # For portability
+  
+ai:
+  coach_state_file: "./ai_state/coach_state.json"
+  memory_dir: "./ai_state/memory"
+  
+obsidian:
+  daily_notes_folder: "00_inbox"
+  templates_folder: "90_templates"
+  
+governance:
+  calibration_gate: 80  # Percent threshold
+  card_debt_multiplier: 2.0
+  max_new_cards_per_session: 8
