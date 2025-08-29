@@ -1,3 +1,7 @@
+<div align="center">
+<img src="./assets/learny.png" alt="Learny" width="200">
+</div>
+
 # Optimized System for Learning (OSL V3)
 
 A research-backed, AI-assisted learning system for comprehension, retention, and transfer.
