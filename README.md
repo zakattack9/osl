@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/learny.png" alt="Learny" width="200" style="margin-right: 24px;">
+<img src="./assets/learny2.png" alt="Learny" width="200" style="margin-right: 24px;">
 <img src="./assets/osl.png" alt="Learny" width="350">
 </div>
 

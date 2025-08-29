@@ -174,7 +174,7 @@ CLAUDE.md (User Level - ~/.claude/CLAUDE.md)
 
 ## Command & Subagent Specifications
 
-### Slash Commands (`.claude/commands/`)
+### Slash Commands (`.claude/commands/`) - Thin CLI Wrappers
 
 #### `/osl-start` - Book Initialization
 
@@ -182,26 +182,34 @@ CLAUDE.md (User Level - ~/.claude/CLAUDE.md)
 
 ```markdown
 ---
-allowed-tools: Bash(mkdir:*), Write, MultiEdit, Bash(git:*)
+allowed-tools: Bash(osl:*)
 argument-hint: [book title]
-description: Initialize a new book for OSL learning
+description: Initialize a new book (wraps: osl book start)
 ---
 
-## Context
-- Current working directory: !`pwd`
-- Existing books: !`ls -la obsidian/10_books/ 2>/dev/null || echo "No books yet"`
-
 ## Your Task
-Create a complete OSL workspace for book: $ARGUMENTS
+Parse user input: $ARGUMENTS
 
-1. Create folder structure in obsidian/10_books/
-2. Generate book.md with learning outcomes template
-3. Create first session log for today
-4. Update ai_state/coach_state.json
-5. Calculate reading schedule
-6. Add to CLAUDE.md memory
+Extract book title from natural language:
+- "Deep Work" → book="Deep Work"
+- "starting Deep Work by Cal Newport" → book="Deep Work", author="Cal Newport"
+- "I want to read Atomic Habits" → book="Atomic Habits"
 
-Use the book title to create a sanitized folder name (no spaces/special chars).
+If book title missing:
+Ask user: "What's the title of the book you want to start?"
+
+Execute:
+```bash
+osl book start --book "$BOOK" --author "$AUTHOR"
+```
+
+If error occurs:
+- Read the JSON error response
+- Extract the "suggestion" field
+- Try the suggested command
+- If still fails, show error to user
+
+Display success response directly to user.
 ```
 
 #### `/osl-session` - Session Management
@@ -210,29 +218,42 @@ Use the book title to create a sanitized folder name (no spaces/special chars).
 
 ```markdown
 ---
-allowed-tools: Read, Write, MultiEdit, Bash(date:*)
-argument-hint: start | end | pause | status
-description: Manage OSL reading sessions with tracking
+allowed-tools: Bash(osl:*)
+argument-hint: start | end | status
+description: Manage reading sessions (wraps: osl session)
 ---
 
-## Current Session State
-- Timer status: !`cat .osl_session_timer 2>/dev/null || echo "No active session"`
-- Active book: @ai_state/current_book.txt
-- Today's date: !`date +%Y-%m-%d`
+## Your Task
+Parse intent: $ARGUMENTS
 
-## Task: $ARGUMENTS
+Map natural language:
+- "start", "begin", "let's go" → start
+- "end", "done", "finished" → end
+- "status", "where am I" → status
 
-If starting:
-1. Check governance gates from @ai_state/coach_state.json
-2. Show any overdue reviews
-3. Create new session file from template
-4. Start timer in .osl_session_timer
+### For START:
+```bash
+osl session start
+```
 
-If ending:
-1. Calculate duration
-2. Prompt for metrics (pages, retrieval %, notes created, cards created)
-3. Update coach_state.json
-4. Git commit session file
+### For END:
+First ask user for metrics:
+- Pages read?
+- Retrieval attempts?
+- Successful recalls?
+- Cards created (max 8)?
+
+Then:
+```bash
+osl session end --pages $P --retrieval $R --recalls $S --cards $C
+```
+
+### For STATUS:
+```bash
+osl session status
+```
+
+Handle errors by reading JSON and retrying with suggestions.
 ```
 
 ### Subagents (`.claude/agents/`)
@@ -627,69 +648,108 @@ You are an expert in creating effective retrieval practice materials following e
 - Provide calibration feedback
 ```
 
-## Hooks Configuration
+## Hooks Configuration (CLI Tool Integration)
+
+### Principle: Hooks Call CLI, Never Duplicate Logic
+
+All hooks delegate to the OSL CLI tool to ensure single source of truth.
 
 ### Session Tracking Hook
 
-**Location:** `.claude/hooks/post-command.sh`
+**Location:** `.claude/hooks/track-osl.sh`
 
 ```bash
 #!/bin/bash
-# Automatically track OSL command usage
+# Track all OSL-related commands using CLI tool
 
 if [[ "$1" == "/osl-"* ]]; then
-    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    command="$1"
-    
-    # Update session log
-    jq --arg ts "$timestamp" --arg cmd "$command" \
-        '.sessions += [{"timestamp": $ts, "command": $cmd}]' \
-        ai_state/session_history.json > tmp.json && \
-        mv tmp.json ai_state/session_history.json
-    
-    # Check governance gates
-    python3 scripts/check_governance.py
+    # Let CLI tool handle tracking
+    osl metrics track --event "command" --data "$1" --timestamp "$(date -Iseconds)"
 fi
 ```
 
-### Daily Reminder Hook
+### Startup Hook
 
-**Location:** `.claude/hooks/startup.sh`
+**Location:** `.claude/hooks/osl-startup.sh`
 
 ```bash
 #!/bin/bash
-# Check for daily OSL activities on Claude Code startup
+# Check OSL status on Claude Code startup
 
-last_session=$(jq -r '.sessions[-1].timestamp' ai_state/session_history.json)
-today=$(date -u +"%Y-%m-%d")
+# Get due items from CLI
+due_items=$(osl review due --format json)
+count=$(echo "$due_items" | jq '.count')
 
-if [[ "$last_session" < "$today" ]]; then
-    echo "🧠 Remember to do your OSL session today!"
-    echo "Run /osl-session to start"
+if [ "$count" -gt 0 ]; then
+    echo "🧠 OSL Reminder: You have $count items due today"
+    echo "Run: /osl-review to see details"
+fi
+
+# Check governance status
+governance=$(osl state query --key governance --format json)
+if echo "$governance" | jq -e '.calibration_gate == "failing"' > /dev/null; then
+    echo "⚠️ Calibration below 80% - review mode recommended"
 fi
 ```
 
-### Session Completion Hook
+### Post-Session Hook
 
-**Location:** `.claude/hooks/session-end.sh`
+**Location:** `.claude/hooks/post-session.sh`
 
 ```bash
 #!/bin/bash
-# Auto-commit session files and update metrics
+# Auto-commit after session commands
 
-if [ -f ".osl_session_active" ]; then
-    # Get session metrics
-    session_file=$(cat .osl_session_active)
-    
-    # Git commit
-    git add "$session_file"
-    git commit -m "OSL: Complete session $(date +%Y-%m-%d)"
-    
-    # Clean up
-    rm .osl_session_active
-    
-    echo "✅ Session saved and committed"
+if [[ "$1" == "/osl-session end" ]]; then
+    # CLI already handled state updates, just commit
+    osl git commit --message "Session completed"
 fi
+```
+
+### Error Recovery Hook
+
+**Location:** `.claude/hooks/error-handler.sh`
+
+```bash
+#!/bin/bash
+# Handle OSL CLI errors gracefully
+
+if [ "$2" -ne 0 ] && [[ "$1" == "osl "* ]]; then
+    # Parse error JSON from CLI
+    error_json=$(echo "$3" | jq -r '.suggestion // empty')
+    
+    if [ -n "$error_json" ]; then
+        echo "💡 Suggestion: $error_json"
+        echo "Would you like me to try that instead? (y/n)"
+    fi
+fi
+```
+
+### Configuration File
+
+**Location:** `.claude/settings.json`
+
+```json
+{
+  "outputStyle": "OSL Default",
+  "hooks": {
+    "enabled": true,
+    "postCommand": ".claude/hooks/track-osl.sh",
+    "sessionStart": ".claude/hooks/osl-startup.sh",
+    "sessionEnd": ".claude/hooks/post-session.sh",
+    "errorHandler": ".claude/hooks/error-handler.sh"
+  },
+  "tools": {
+    "whitelist": ["Bash(osl:*)", "Read", "Write"],
+    "requireConfirmation": false
+  },
+  "osl": {
+    "cliPath": "/usr/local/bin/osl",
+    "autoInvokeTutor": true,
+    "reminderTime": "09:00",
+    "defaultBook": null
+  }
+}
 ```
 
 ## CLAUDE.md Memory Structure
@@ -771,6 +831,75 @@ fi
 ```
 
 ## Output Styles for Learning
+
+### OSL Default Style (Primary)
+
+**Location:** `.claude/output-styles/osl-default.md`
+
+```markdown
+---
+name: OSL Default
+description: Guides users to correct OSL tools and enforces proper usage
+---
+
+# OSL Learning Assistant
+
+You are the OSL interface that guides users through proper tool usage.
+
+## Core Behaviors
+
+### Tool Routing
+When users express learning intent, guide them to the right tool:
+- "I want to start reading" → Suggest: `/osl-session start`
+- "What should I review?" → Suggest: `/osl-review`
+- "Time for synthesis" → Suggest: `/osl-synthesis`
+
+### Error Recovery
+When tool calls fail:
+1. Read the JSON error response
+2. Extract the "suggestion" field
+3. Show user: "Let me try: [suggestion]"
+4. Execute suggested command
+5. If still fails, explain the issue clearly
+
+### Natural Language Processing
+Users may say things naturally. Map to tools:
+- "Beginning Deep Work" → `osl book start --book "Deep Work"`
+- "Done with chapter 3" → `osl session end` (then collect metrics)
+- "How am I doing?" → `osl metrics report --type progress`
+
+### Proactive Guidance
+- Morning: Check `osl review due` and remind if items pending
+- After reading: Automatically invoke osl-tutor subagent
+- End of week: Suggest `/osl-synthesis`
+- Monthly: Remind about transfer project
+
+## Output Format
+Always be concise but helpful:
+- Show what command is being run
+- Display results clearly
+- Suggest next logical action
+- Keep responses under 3 lines when possible
+
+## When Unsure
+If you can't determine which OSL tool to use:
+1. Run: `osl help` to show available commands
+2. Ask user to clarify their intent
+3. Never try to implement OSL logic yourself
+4. Always defer to the CLI tool
+```
+
+**Settings Configuration:** `.claude/settings.json`
+```json
+{
+  "outputStyle": "OSL Default",
+  "hooks": {
+    "enabled": true,
+    "postCommand": ".claude/hooks/track-osl.sh",
+    "sessionStart": ".claude/hooks/osl-startup.sh"
+  }
+}
+```
 
 ### OSL Learning Mode
 
@@ -1004,6 +1133,1046 @@ Claude Code commands access state through:
 - Run setup for new user
 - Complete month simulation
 
+## AI Non-Determinism Framework
+
+### Purpose
+Establish systematic guardrails to ensure reliable OSL automation despite inherent AI non-determinism. This framework enables natural language interaction while guaranteeing deterministic outcomes through structured constraints and validation layers.
+
+### Core Philosophy: Three-Layer Abstraction Model
+
+**The OSL interaction hierarchy (increasing abstraction/non-determinism):**
+
+1. **CLI Tool Layer** (Deterministic)
+   - Direct command: `osl start --book "Deep Work"`
+   - Full control, explicit parameters
+   - Used by: Power users, scripts, automation
+
+2. **Slash Command Layer** (Semi-Deterministic)
+   - Claude command: `/osl-start "Deep Work"`
+   - Thin wrapper over CLI with validation
+   - Used by: Users wanting quick, reliable execution
+
+3. **Natural Language Layer** (Non-Deterministic)
+   - Conversation: "I'm starting Deep Work today"
+   - AI interprets and maps to CLI tool
+   - Used by: Users wanting natural interaction
+
+**Core Rules:**
+- The CLI tool is the **single source of truth** for all OSL operations
+- Claude/AI layers are **thin interfaces** that translate to CLI commands
+- All business logic, validation, and state management lives in the CLI tool
+- AI never implements OSL logic, only translates intent to CLI calls
+
+### The Seven Pillars of Deterministic AI Automation
+
+#### 1. **CLI Tool as Source of Truth** [CRITICAL]
+All OSL logic lives in the CLI tool, not in AI:
+- User says: "I'm done reading chapter 3"
+- AI interprets: End session with chapter context
+- Execution: `osl session end --chapter 3`
+- CLI handles: validation, calculations, state updates, error messages
+
+#### 2. **State Isolation** [CRITICAL]
+AI never directly modifies state files:
+- ❌ AI writes JSON directly
+- ✅ AI calls: `osl state update --metric retrieval --value 0.87`
+- All state changes go through CLI's validated, atomic operations
+- CLI provides rollback and backup automatically
+
+#### 3. **Calculation Delegation** [CRITICAL]
+AI never performs arithmetic or date calculations:
+- ❌ AI calculates: "7/8 = 87.5%"
+- ✅ AI calls: `osl metrics calculate --type retrieval --success 7 --total 8`
+- CLI returns: `{"retrieval_rate": 0.875, "formatted": "87.5%"}`
+- AI displays formatted result to user
+
+#### 4. **Error Feedback Loop** [CRITICAL]
+CLI provides clear, parseable error messages for AI self-correction:
+```bash
+$ osl session start
+ERROR: No book selected. Use --book flag or run 'osl book select' first
+SUGGESTION: osl session start --book "Deep Work"
+EXIT_CODE: 1
+```
+AI reads error, extracts suggestion, retries with correction
+
+#### 5. **Thin Wrapper Commands** [IMPORTANT]
+Slash commands are minimal validators before CLI calls:
+```markdown
+---
+allowed-tools: Bash(osl:*)
+---
+Parse $ARGUMENTS for book name
+If missing: Ask user "Which book?"
+Then: `osl start --book "$BOOK"`
+Display CLI output directly
+```
+
+#### 6. **Hook Automation** [IMPORTANT]
+Hooks call CLI tool, never duplicate logic:
+```bash
+# .claude/hooks/post-command.sh
+if [[ "$1" == "/osl-"* ]]; then
+    osl metrics track --command "$1" --timestamp "$(date -Iseconds)"
+fi
+```
+
+#### 7. **Context Retrieval** [IMPORTANT]
+Subagents use CLI to get context:
+```bash
+osl context get --type session --format json
+osl summary generate --week 3 --output markdown
+osl state query --metric calibration_score
+```
+
+### Implementation Patterns
+
+#### Pattern 1: Contextual Command Execution
+```markdown
+# .claude/commands/osl-session.md
+---
+allowed-tools: Bash(python3:scripts/session_*.py), Read
+argument-hint: start [book] | end | status
+description: Natural language session management
+---
+
+## Context Loading (Deterministic)
+- Current state: !`python3 scripts/get_session_state.py --format json`
+- Active book: !`cat ai_state/current_book.txt 2>/dev/null || echo "none"`
+- Governance: !`python3 scripts/check_governance.py --format json`
+
+## Your Task
+Interpret user intent from: $ARGUMENTS
+
+Map to appropriate script:
+- "start", "begin", "starting" → `python3 scripts/session_start.py`
+- "end", "done", "finished" → `python3 scripts/session_end.py`
+- "status", "where am I" → `python3 scripts/session_status.py`
+
+NEVER:
+- Calculate durations manually
+- Parse dates yourself
+- Make governance decisions
+- Edit state files directly
+```
+
+#### Pattern 2: Validated State Updates
+```python
+# scripts/session_end.py
+import json
+import sys
+from jsonschema import validate
+from datetime import datetime
+
+def end_session(metrics_input):
+    """Deterministic session ending with validation"""
+    
+    # Load and validate current state
+    with open('ai_state/coach_state.json') as f:
+        state = json.load(f)
+    
+    # Validate input from AI
+    schema = {
+        "type": "object",
+        "properties": {
+            "pages": {"type": "integer", "minimum": 0},
+            "retrieval_attempts": {"type": "integer", "minimum": 0},
+            "successful_recalls": {"type": "integer", "minimum": 0},
+            "cards_created": {"type": "integer", "minimum": 0, "maximum": 8}
+        },
+        "required": ["pages", "retrieval_attempts", "successful_recalls"]
+    }
+    
+    try:
+        validate(metrics_input, schema)
+    except:
+        return {"error": "Invalid metrics format", "expected": schema}
+    
+    # Calculate derived metrics deterministically
+    retrieval_rate = (metrics_input['successful_recalls'] / 
+                     metrics_input['retrieval_attempts'] 
+                     if metrics_input['retrieval_attempts'] > 0 else 0)
+    
+    # Update state atomically
+    state['metrics']['last_retrieval_rate'] = retrieval_rate
+    state['metrics']['total_sessions'] += 1
+    
+    # Check governance gates
+    if retrieval_rate < 0.8:
+        state['governance']['calibration_gate'] = 'warning'
+    
+    # Write with backup
+    backup_path = f"ai_state/backups/state_{datetime.now():%Y%m%d_%H%M%S}.json"
+    shutil.copy('ai_state/coach_state.json', backup_path)
+    
+    with open('ai_state/coach_state.json.tmp', 'w') as f:
+        json.dump(state, f, indent=2)
+    os.rename('ai_state/coach_state.json.tmp', 'ai_state/coach_state.json')
+    
+    return {
+        "status": "success",
+        "retrieval_rate": f"{retrieval_rate:.1%}",
+        "governance": state['governance'],
+        "next_action": "Run /osl-review to check due items"
+    }
+```
+
+#### Pattern 3: Structured Output Enforcement
+```markdown
+# Force AI to use specific output format
+---
+allowed-tools: Bash(python3:scripts/quiz_runner.py)
+---
+
+## Quiz Administration Protocol
+
+You MUST use the quiz runner for ALL quiz operations:
+
+```bash
+# Initialize quiz
+python3 scripts/quiz_runner.py --action start --topic "$TOPIC"
+
+# Get next question (returns JSON)
+python3 scripts/quiz_runner.py --action next
+
+# Submit confidence (returns validation)
+python3 scripts/quiz_runner.py --action confidence --rating $RATING
+
+# Submit answer (returns feedback)
+python3 scripts/quiz_runner.py --action answer --response "$ANSWER"
+```
+
+Parse the JSON output and present to user. NEVER:
+- Show answers before confidence collection
+- Skip feedback delivery
+- Calculate scores yourself
+```
+
+### Validation Gates for Commands
+
+Every OSL command must pass these validation gates:
+
+#### Gate 1: Input Validation
+- Can the AI reliably parse user intent?
+- Are there ambiguous cases that need clarification?
+- Is there a clear mapping to deterministic actions?
+
+#### Gate 2: State Safety
+- Are all state modifications atomic?
+- Is there rollback capability?
+- Are backups created before changes?
+
+#### Gate 3: Calculation Accuracy
+- Are all calculations delegated to scripts?
+- Do scripts return structured, parseable output?
+- Are edge cases handled (division by zero, etc.)?
+
+#### Gate 4: Flow Integrity
+- Is the workflow enforceable by state machine?
+- Can the AI skip critical steps?
+- Are there guards against out-of-order execution?
+
+#### Gate 5: Error Recovery
+- What happens when scripts fail?
+- How does AI communicate errors to users?
+- Is there always a manual fallback?
+
+### Continuous Validation Protocol
+
+```bash
+# scripts/validate_ai_behavior.py
+"""
+Run after each session to detect AI misbehavior
+"""
+
+def validate_session_log(log_path):
+    violations = []
+    
+    with open(log_path) as f:
+        log = json.load(f)
+    
+    # Check for manual calculations
+    if 'calculated_by_ai' in log:
+        violations.append("AI performed manual calculation")
+    
+    # Check for direct state edits
+    if log.get('state_edit_method') != 'script':
+        violations.append("AI edited state directly")
+    
+    # Check for skipped steps
+    expected_flow = ['start', 'active', 'ending', 'complete']
+    if log.get('state_transitions') != expected_flow:
+        violations.append(f"Invalid flow: {log.get('state_transitions')}")
+    
+    # Check governance enforcement
+    if log.get('governance_overridden'):
+        violations.append("AI overrode governance gate")
+    
+    return {
+        'session': log_path,
+        'violations': violations,
+        'severity': 'critical' if violations else 'pass'
+    }
+```
+
+### Migration Strategy for Existing Commands
+
+Transform non-deterministic commands systematically:
+
+**Before (Non-deterministic):**
+```markdown
+Calculate retrieval rate and update the state file
+```
+
+**After (Deterministic):**
+```markdown
+Run: `python3 scripts/update_metrics.py --retrieval $SUCCESS --attempts $TOTAL`
+Display the JSON output to user
+```
+
+### Testing Framework
+
+```bash
+# scripts/test_determinism.sh
+#!/bin/bash
+
+# Test 1: State modification safety
+echo "Testing state safety..."
+cp ai_state/coach_state.json /tmp/before.json
+/osl-session end <<< "5 pages, 8 retrieval, 7 success"
+diff /tmp/before.json ai_state/backups/latest.json || echo "✓ Backup created"
+
+# Test 2: Calculation accuracy
+echo "Testing calculations..."
+result=$(python3 scripts/calculate_metrics.py retrieval_rate 7 8)
+expected="0.875"
+[ "$result" == "$expected" ] && echo "✓ Calculation correct"
+
+# Test 3: Flow enforcement
+echo "Testing flow state..."
+python3 scripts/quiz_runner.py --action answer --response "test" 2>&1 | \
+  grep -q "Must collect confidence first" && echo "✓ Flow enforced"
+
+# Test 4: Governance gates
+echo "Testing governance..."
+python3 scripts/check_governance.py --set card_debt 2.5
+/osl-session start 2>&1 | grep -q "BLOCKED" && echo "✓ Gate enforced"
+```
+
+### Success Metrics
+
+Track reliability improvements:
+
+1. **Error Rate**: < 1% of sessions have AI violations
+2. **Rollback Frequency**: < 0.1% of state updates need rollback
+3. **User Corrections**: < 5% of commands need user intervention
+4. **Flow Violations**: 0 instances of skipped required steps
+5. **Calculation Errors**: 0 instances of manual math by AI
+
+## OSL CLI Tool Specification
+
+### Architecture
+```
+osl                         # Main CLI entry point
+├── book/                   # Book management commands
+│   ├── start              # Initialize new book
+│   ├── list               # List active books
+│   └── select             # Set current book
+├── session/               # Session management
+│   ├── start              # Begin reading session
+│   ├── end                # End with metrics
+│   └── status             # Current session info
+├── review/                # Retrieval practice
+│   ├── due                # Show due items
+│   ├── quiz               # Run quiz session
+│   └── calibrate          # Calibration test
+├── synthesis/             # Integration commands
+│   ├── weekly             # Weekly synthesis
+│   └── project            # Transfer projects
+├── metrics/               # Calculations & queries
+│   ├── calculate          # Compute metrics
+│   ├── track              # Record events
+│   └── report             # Generate reports
+├── state/                 # State management
+│   ├── query              # Read state values
+│   ├── update             # Modify state
+│   └── backup             # Create backup
+├── context/               # AI context generation
+│   ├── get                # Retrieve context
+│   └── summary            # Generate summaries
+└── config/                # Configuration
+    ├── init               # Initial setup
+    └── validate           # Check configuration
+```
+
+### CLI Implementation
+```python
+#!/usr/bin/env python3
+# osl_cli.py - Main CLI tool
+import argparse
+import json
+import sys
+from pathlib import Path
+from datetime import datetime
+import logging
+
+class OSLCli:
+    """OSL Command Line Interface - Single source of truth for all operations"""
+    
+    def __init__(self):
+        self.config_path = Path.home() / '.osl' / 'config.json'
+        self.state_path = Path('ai_state/coach_state.json')
+        self.setup_logging()
+        
+    def setup_logging(self):
+        """Configure structured logging for AI parsing"""
+        logging.basicConfig(
+            format='%(levelname)s: %(message)s',
+            level=logging.INFO
+        )
+        
+    def error_with_suggestion(self, message, suggestion=None, code=1):
+        """Provide clear error messages for AI self-correction"""
+        output = {
+            "status": "error",
+            "message": message,
+            "suggestion": suggestion,
+            "exit_code": code
+        }
+        print(json.dumps(output, indent=2))
+        sys.exit(code)
+        
+    def success_response(self, data):
+        """Return structured success response"""
+        output = {
+            "status": "success",
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+        print(json.dumps(output, indent=2))
+        return 0
+
+    # Command implementations
+    def cmd_book_start(self, args):
+        """Initialize new book with all OSL structure"""
+        if not args.book:
+            self.error_with_suggestion(
+                "No book title provided",
+                "osl book start --book 'Book Title'"
+            )
+        
+        # Sanitize book name
+        safe_name = args.book.lower().replace(' ', '_')
+        book_path = Path(f'obsidian/10_books/{safe_name}')
+        
+        # Create structure
+        book_path.mkdir(parents=True, exist_ok=True)
+        (book_path / 'notes' / 'permanent').mkdir(parents=True)
+        (book_path / 'notes' / 'literature').mkdir(parents=True)
+        
+        # Update state atomically
+        state = self.load_state()
+        state['active_books'].append({
+            'id': safe_name,
+            'title': args.book,
+            'author': args.author,
+            'start_date': datetime.now().isoformat(),
+            'current_page': 0,
+            'total_pages': args.pages or 0
+        })
+        self.save_state(state)
+        
+        return self.success_response({
+            'book_id': safe_name,
+            'path': str(book_path),
+            'message': f"Book '{args.book}' initialized"
+        })
+    
+    def cmd_session_start(self, args):
+        """Start session with governance checks"""
+        state = self.load_state()
+        
+        # Check governance gates
+        if state['governance']['card_debt_gate'] == 'failing':
+            self.error_with_suggestion(
+                "Card debt exceeds 2x limit",
+                "osl review due --clear-debt"
+            )
+        
+        # Create session
+        session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+        session_file = Path(f'ai_state/session_logs/{session_id}.json')
+        
+        session_data = {
+            'id': session_id,
+            'book': args.book or state['active_books'][0]['title'],
+            'start_time': datetime.now().isoformat()
+        }
+        
+        session_file.write_text(json.dumps(session_data, indent=2))
+        Path('.osl_session_timer').write_text(str(datetime.now().timestamp()))
+        
+        warnings = []
+        if state['governance']['calibration_gate'] == 'warning':
+            warnings.append("Calibration <80%: max 4 new cards")
+        
+        return self.success_response({
+            'session_id': session_id,
+            'warnings': warnings
+        })
+    
+    def cmd_metrics_calculate(self, args):
+        """Perform calculations deterministically"""
+        if args.type == 'retrieval':
+            if args.total == 0:
+                rate = 0.0
+            else:
+                rate = args.success / args.total
+            
+            return self.success_response({
+                'retrieval_rate': rate,
+                'formatted': f'{rate:.1%}',
+                'success': args.success,
+                'total': args.total
+            })
+        
+        self.error_with_suggestion(
+            f"Unknown metric type: {args.type}",
+            "osl metrics calculate --type retrieval"
+        )
+    
+    def load_state(self):
+        """Load state with validation"""
+        if not self.state_path.exists():
+            return self.default_state()
+        
+        with open(self.state_path) as f:
+            return json.load(f)
+    
+    def save_state(self, state):
+        """Save state atomically with backup"""
+        # Backup
+        backup = self.state_path.with_suffix('.backup')
+        if self.state_path.exists():
+            backup.write_text(self.state_path.read_text())
+        
+        # Atomic write
+        temp = self.state_path.with_suffix('.tmp')
+        temp.write_text(json.dumps(state, indent=2))
+        temp.rename(self.state_path)
+
+def main():
+    parser = argparse.ArgumentParser(prog='osl')
+    subparsers = parser.add_subparsers(dest='command')
+    
+    # Book commands
+    book = subparsers.add_parser('book')
+    book_sub = book.add_subparsers(dest='subcommand')
+    
+    book_start = book_sub.add_parser('start')
+    book_start.add_argument('--book', required=True)
+    book_start.add_argument('--author')
+    book_start.add_argument('--pages', type=int)
+    
+    # Session commands
+    session = subparsers.add_parser('session')
+    session_sub = session.add_subparsers(dest='subcommand')
+    
+    session_start = session_sub.add_parser('start')
+    session_start.add_argument('--book')
+    
+    session_end = session_sub.add_parser('end')
+    session_end.add_argument('--pages', type=int, required=True)
+    session_end.add_argument('--retrieval', type=int, required=True)
+    session_end.add_argument('--recalls', type=int, required=True)
+    
+    # Metrics commands
+    metrics = subparsers.add_parser('metrics')
+    metrics_sub = metrics.add_subparsers(dest='subcommand')
+    
+    calc = metrics_sub.add_parser('calculate')
+    calc.add_argument('--type', required=True)
+    calc.add_argument('--success', type=int)
+    calc.add_argument('--total', type=int)
+    
+    # Parse and execute
+    args = parser.parse_args()
+    cli = OSLCli()
+    
+    # Route to appropriate command
+    if args.command == 'book' and args.subcommand == 'start':
+        return cli.cmd_book_start(args)
+    elif args.command == 'session' and args.subcommand == 'start':
+        return cli.cmd_session_start(args)
+    elif args.command == 'metrics' and args.subcommand == 'calculate':
+        return cli.cmd_metrics_calculate(args)
+    else:
+        parser.print_help()
+        return 1
+
+if __name__ == '__main__':
+    sys.exit(main())
+```
+
+### Installation
+```bash
+# Install globally
+pip install -e .
+
+# Or create standalone executable
+pyinstaller --onefile osl_cli.py -n osl
+
+# Add to PATH
+echo 'export PATH="$HOME/.osl/bin:$PATH"' >> ~/.bashrc
+```
+
+## Example Deterministic Scripts
+
+### Session Start Script
+```python
+#!/usr/bin/env python3
+# scripts/session_start.py
+import json
+import sys
+import argparse
+from datetime import datetime
+from pathlib import Path
+
+def start_session(book_title=None):
+    """Start a new OSL session with governance checks"""
+    
+    # Check governance gates first
+    with open('ai_state/coach_state.json') as f:
+        state = json.load(f)
+    
+    # Hard blocks
+    if state['governance']['card_debt_gate'] == 'failing':
+        return {
+            "status": "blocked",
+            "reason": "Card debt exceeds 2x limit",
+            "action": "Run /osl-review to clear backlog",
+            "exit_code": 1
+        }
+    
+    # Warnings
+    warnings = []
+    if state['governance']['calibration_gate'] == 'failing':
+        warnings.append("Calibration below 80% - limiting new cards to 4")
+    
+    # Create session
+    session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_data = {
+        "id": session_id,
+        "book": book_title or state.get('active_books', [{}])[0].get('title'),
+        "start_time": datetime.now().isoformat(),
+        "warnings": warnings
+    }
+    
+    # Write session file
+    session_file = f"ai_state/session_logs/{session_id}.json"
+    with open(session_file, 'w') as f:
+        json.dump(session_data, f, indent=2)
+    
+    # Write timer file
+    with open('.osl_session_timer', 'w') as f:
+        f.write(str(datetime.now().timestamp()))
+    
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "book": session_data['book'],
+        "warnings": warnings,
+        "message": "Session started. Timer running."
+    }
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--book', help='Book title')
+    args = parser.parse_args()
+    
+    result = start_session(args.book)
+    print(json.dumps(result, indent=2))
+    sys.exit(result.get('exit_code', 0))
+```
+
+### Metric Calculation Script
+```bash
+#!/bin/bash
+# scripts/calculate_metrics.sh
+
+case "$1" in
+    retrieval_rate)
+        # Calculate retrieval rate with precision
+        if [ "$3" -eq 0 ]; then
+            echo "0.0"
+        else
+            echo "scale=3; $2 / $3" | bc
+        fi
+        ;;
+        
+    calibration_score)
+        # Complex calibration from confidence vs actual
+        python3 -c "
+import json
+import sys
+
+confidence_file = '$2'
+actual_file = '$3'
+
+with open(confidence_file) as f:
+    confidence = json.load(f)['ratings']
+with open(actual_file) as f:
+    actual = json.load(f)['correct']
+
+# Brier score calculation
+score = sum((c/5 - a)**2 for c,a in zip(confidence, actual)) / len(confidence)
+calibration = (1 - score) * 100
+
+print(f'{calibration:.1f}')
+"
+        ;;
+        
+    card_debt_ratio)
+        # Query current card debt
+        python3 -c "
+import json
+
+with open('ai_state/coach_state.json') as f:
+    state = json.load(f)
+
+due = state['metrics'].get('cards_due', 0)
+throughput = state['metrics'].get('daily_throughput', 1)
+
+ratio = due / max(throughput, 1)
+print(f'{ratio:.2f}')
+"
+        ;;
+        
+    *)
+        echo "Unknown metric: $1" >&2
+        exit 1
+        ;;
+esac
+```
+
+### Quiz Runner with State Machine
+```python
+#!/usr/bin/env python3
+# scripts/quiz_runner.py
+import json
+import argparse
+import sys
+from pathlib import Path
+
+class QuizStateMachine:
+    """Enforces quiz flow: INIT -> CONFIDENCE -> ANSWER -> FEEDBACK"""
+    
+    def __init__(self):
+        self.state_file = '.quiz_state.json'
+        self.load_state()
+    
+    def load_state(self):
+        if Path(self.state_file).exists():
+            with open(self.state_file) as f:
+                self.state = json.load(f)
+        else:
+            self.state = {"status": "INIT", "current_question": None}
+    
+    def save_state(self):
+        with open(self.state_file, 'w') as f:
+            json.dump(self.state, f)
+    
+    def start(self, topic):
+        """Initialize quiz session"""
+        if self.state['status'] != 'INIT':
+            return {"error": f"Cannot start: already in {self.state['status']}"}
+        
+        # Load questions for topic
+        quiz_file = f"quiz_bank/{topic}/quiz_001.json"
+        with open(quiz_file) as f:
+            questions = json.load(f)['questions']
+        
+        self.state = {
+            "status": "READY",
+            "topic": topic,
+            "questions": questions,
+            "current_index": 0,
+            "responses": []
+        }
+        self.save_state()
+        
+        return {
+            "status": "success",
+            "message": f"Quiz started for {topic}",
+            "total_questions": len(questions)
+        }
+    
+    def next_question(self):
+        """Get next question - must be in READY state"""
+        if self.state['status'] != 'READY':
+            return {"error": f"Cannot get question in state: {self.state['status']}"}
+        
+        if self.state['current_index'] >= len(self.state['questions']):
+            return {"status": "complete", "message": "All questions answered"}
+        
+        question = self.state['questions'][self.state['current_index']]
+        self.state['status'] = 'AWAITING_CONFIDENCE'
+        self.state['current_question'] = question
+        self.save_state()
+        
+        return {
+            "status": "success",
+            "question_number": self.state['current_index'] + 1,
+            "question": question['text'],
+            "next_action": "Submit confidence rating (1-5)"
+        }
+    
+    def submit_confidence(self, rating):
+        """Record confidence - must be before answer"""
+        if self.state['status'] != 'AWAITING_CONFIDENCE':
+            return {"error": "Must get question first"}
+        
+        if not 1 <= rating <= 5:
+            return {"error": "Confidence must be 1-5"}
+        
+        self.state['current_confidence'] = rating
+        self.state['status'] = 'AWAITING_ANSWER'
+        self.save_state()
+        
+        return {
+            "status": "success",
+            "confidence_recorded": rating,
+            "next_action": "Submit your answer"
+        }
+    
+    def submit_answer(self, answer):
+        """Check answer and provide feedback"""
+        if self.state['status'] != 'AWAITING_ANSWER':
+            return {"error": "Must submit confidence first"}
+        
+        question = self.state['current_question']
+        correct = answer.lower() == question['answer'].lower()
+        
+        # Record response
+        self.state['responses'].append({
+            "question_id": self.state['current_index'],
+            "confidence": self.state['current_confidence'],
+            "answer": answer,
+            "correct": correct
+        })
+        
+        # Move to next question
+        self.state['current_index'] += 1
+        self.state['status'] = 'READY'
+        self.save_state()
+        
+        return {
+            "status": "success",
+            "correct": correct,
+            "feedback": question.get('feedback', 'No feedback available'),
+            "citation": question.get('citation'),
+            "next_action": "Get next question or end quiz"
+        }
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--action', required=True, 
+                       choices=['start', 'next', 'confidence', 'answer'])
+    parser.add_argument('--topic', help='Topic for quiz')
+    parser.add_argument('--rating', type=int, help='Confidence rating')
+    parser.add_argument('--response', help='Answer text')
+    
+    args = parser.parse_args()
+    quiz = QuizStateMachine()
+    
+    if args.action == 'start':
+        result = quiz.start(args.topic)
+    elif args.action == 'next':
+        result = quiz.next_question()
+    elif args.action == 'confidence':
+        result = quiz.submit_confidence(args.rating)
+    elif args.action == 'answer':
+        result = quiz.submit_answer(args.response)
+    
+    print(json.dumps(result, indent=2))
+    sys.exit(1 if 'error' in result else 0)
+```
+
+## Critical Design Clarifications
+
+### 1. Quiz Generation Philosophy
+Based on OSL's retrieval practice principle, quizzes are **AI-generated targeting actual gaps**:
+- **Micro-loop quizzes**: 2-3 questions generated by Tutor after each reading chunk
+- **Weekly calibration**: 6-10 items (3 recall, 3-4 application, 2-3 transfer)
+- **Source**: Questions derived from failed retrievals and identified misconceptions
+- **Storage**: Generated quizzes saved for reuse and refinement
+
+### 2. Flashcard Pipeline (Anki Integration)
+```json
+// anki/cards/{session_id}.json
+{
+  "session_id": "20250129_deep_work",
+  "book": "Deep Work",
+  "cards": [
+    {
+      "id": "uuid-1234",
+      "type": "cloze",
+      "text": "The {{c1::micro-loop}} consists of Q→Read→Retrieve→Explain→Feedback",
+      "source": {
+        "title": "OSL V3 Core",
+        "author": "OSL Team",
+        "page": "6",
+        "location": "Section 6"
+      },
+      "tags": ["book/osl_v3", "concept/micro_loop", "type/cloze"],
+      "created": "2025-01-29T10:30:00Z",
+      "from_miss": true,
+      "context": "Failed recall during micro-loop 3"
+    },
+    {
+      "id": "uuid-5678",
+      "type": "application",
+      "front": "You've just read 10 pages of a technical chapter. What should you do next?",
+      "back": "Stop reading and enter the micro-loop: 1) Free recall for 1-2 min, 2) Write Feynman explanation, 3) Get Tutor feedback",
+      "source": {
+        "title": "OSL V3 Core",
+        "page": "6"
+      },
+      "tags": ["book/osl_v3", "concept/micro_loop", "type/application"],
+      "created": "2025-01-29T10:35:00Z",
+      "from_miss": false
+    }
+  ]
+}
+```
+
+**AnkiConnect Pipeline:**
+```bash
+# CLI commands for flashcard management
+osl flashcard create --from-miss "concept" --session current
+osl flashcard list --session current
+osl flashcard sync --deck "OSL::BookTitle"  # Uses AnkiConnect
+osl flashcard export --format apkg          # Fallback export
+```
+
+### 3. Permanent Note Creation Workflow
+Following OSL Section 7 ("end of Each Session, 8-12 min"):
+```bash
+# After micro-loops complete
+osl note create --type permanent --session current
+# CLI provides template with structure:
+# - Claim (own words)
+# - Context (applies when/fails when)
+# - Example or application
+# - Citation (with page/location)
+# - Links to related notes
+
+# AI assistance available but not required
+osl note suggest --from-retrieval "last-session"
+```
+
+### 4. Misconception Tracking Implementation
+```json
+// ai_state/misconceptions.json
+{
+  "misconceptions": [
+    {
+      "id": "misc-001",
+      "concept": "spacing intervals",
+      "initial_understanding": "Review daily for best retention",
+      "corrected_understanding": "Increasing intervals (1d→3d→7d) optimize retention",
+      "date_identified": "2025-01-29",
+      "date_resolved": "2025-02-05",
+      "source": "micro-loop-3",
+      "resolution_method": "targeted_practice"
+    }
+  ]
+}
+```
+
+### 5. Multi-Book Session Handling
+- **Design Decision**: Single book per session (simplifies tracking)
+- **Multiple books**: Use separate sessions with explicit book switching
+```bash
+osl session end --book "Deep Work"
+osl session start --book "Atomic Habits"
+```
+
+### 6. Subagent Context Generation
+```bash
+# Each subagent gets specific context via CLI
+osl context tutor    # Returns: misconceptions, failed retrievals, session history
+osl context extractor # Returns: current text, citation requirements
+osl context coach    # Returns: metrics, gates, schedule, performance trends
+
+# Subagents call these in their initialization:
+# .claude/agents/osl-tutor.md:
+# Context: !`osl context tutor --format json`
+```
+
+### 7. Hybrid Quiz Storage (Obsidian + Structured)
+```
+obsidian/quiz_bank/
+├── deep_work/
+│   ├── chapter_1/
+│   │   ├── quiz_001.md        # Human-readable in Obsidian
+│   │   ├── quiz_001.json      # Structured for automation
+│   │   └── results.json       # Performance tracking
+│   └── synthesis/
+│       └── week_3_quiz.md
+└── index.json                  # Master index for programmatic access
+```
+
+**Quiz Markdown Format (quiz_001.md):**
+```markdown
+---
+type: quiz
+book: Deep Work
+chapter: 1
+generated: 2025-01-29
+from_misses: [retrieval_3, retrieval_7]
+dataview: true
+---
+
+# Quiz: Deep Work Chapter 1
+
+## Q1: Recall
+**Question**: What are the two core abilities for thriving in the new economy?
+**Answer**: 1) The ability to quickly master hard things, 2) The ability to produce at an elite level
+**Source**: p. 29
+**Type**: recall
+**Confidence**: _____
+**Actual**: _____
+
+## Q2: Application
+**Question**: How would you apply the "deep work hypothesis" to your current project?
+**Answer**: [Open-ended - evaluate based on proper application of principles]
+**Source**: p. 34
+**Type**: application
+```
+
+### 8. Workflow Validation & Input Preservation
+
+**See full details in:** [OSL Validation Framework](OSL_Validation_Framework.md)
+
+Key validation mechanisms:
+- **State Machine Enforcement**: No skipping steps, validates all transitions
+- **Verbatim Preservation**: User inputs stored with SHA256 hashes
+- **Claude Hooks**: Pre-write validation prevents AI modification
+- **Session State Tracking**: Current state, completed steps, pending actions
+- **Error Recovery**: Clear messages on what went wrong and how to fix
+
+```python
+# Every CLI command validates state first
+validation = state_machine.validate_transition(current, target)
+if not validation['valid']:
+    return error_with_suggestion(validation['error'], validation['suggestion'])
+
+# All user inputs preserved verbatim
+preserver.preserve_input('recall', raw_user_text, 'RECALL_ACTIVE')
+# Returns hash for verification
+```
+
 ## Technical Decisions
 
 ### Core Architecture Decisions (COMPLETED)
@@ -1013,14 +2182,12 @@ Claude Code commands access state through:
 4. ✅ **Storage**: JSON files for state persistence
 5. ✅ **Sync**: Git for cross-device synchronization
 6. ✅ **Notes**: Direct file manipulation + Obsidian URI
-7. ✅ **Flashcards**: JSON quiz bank + optional Anki export
+7. ✅ **Flashcards**: JSON format with AnkiConnect sync
 
-### Implementation Decisions (PENDING)
-
-#### Anki Integration Strategy
-- **Option A**: AnkiConnect API (requires Anki running)
-- **Option B**: Direct .apkg export (portable but one-way)
-- **Option C**: Both with user choice
+### Implementation Decisions (COMPLETED)
+1. ✅ **Anki Integration**: Option C (Both AnkiConnect API and .apkg export)
+2. ✅ **Session Handling**: Single book per session
+3. ✅ **Quiz Storage**: Hybrid markdown + JSON for Obsidian visibility
 
 #### Obsidian Integration
 - **Option A**: URI scheme for opening (obsidian://open)
