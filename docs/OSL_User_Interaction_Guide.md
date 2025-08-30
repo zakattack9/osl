@@ -17,11 +17,19 @@ System: ✅ Session started for Deep Work
 
 ### 2. Reading Phase (20-25 min)
 
-**After reading 5-10 pages, STOP and enter micro-loop:**
+**Track your curiosity questions while reading:**
+```
+You: "Found answer to question 2 about flow state on page 48"
+System: Marking question 2 as resolved. What was the answer?
+You: "Deep work requires deliberate practice, flow is just the experience"
+```
+
+**After reading 5-10 pages (or 1 scene/chapter for literature), STOP:**
 
 ```
 You: "Done reading pages 45-55"
-OR: Just pause and wait
+OR: "Finished chapter 3 scene 2" (for literature)
+OR: "Stopping at page 48 - dense material" (3-5 pages for technical)
 
 System: Great! Let's process what you just read.
         Starting micro-loop...
@@ -62,11 +70,12 @@ System: Good explanation! You covered the concept and importance.
         Consider adding: How is this different from regular work?
 ```
 
-#### C. Tutor Q&A (2-3 min)
+#### C. Tutor Q&A (2-3 min) [AFTER Your Recall & Explanation]
 ```
-System: Let me check your understanding with a few questions.
+System: [AI generates questions based on the material, not your recall quality]
+        Let me check your understanding with a few questions.
 
-Q1: What's the key difference between deep work and shallow work?
+Q1 (Recall): What's the key difference between deep work and shallow work?
 
 You: [Free text answer - 1-3 sentences]
      "Deep work requires full focus and creates new value, while 
@@ -74,38 +83,56 @@ You: [Free text answer - 1-3 sentences]
 
 System: ✅ Correct! Specifically, Newport emphasizes that shallow work
         is often replicable and doesn't create much new value (p. 46).
+        [Immediate corrective feedback enhances testing effect]
 
-Q2: How would you apply deep work to your current project?
+Q2 (Application): How would you apply deep work to your current project?
 
 You: "I could block 2 hours each morning for coding without Slack"
 
 System: Good application! Consider also: What specific project outcome
         would benefit most from deep work sessions?
+
+Q3 (Transfer): How might deep work principles apply to learning a new skill?
+
+You: "I'd practice without distractions and focus on the hardest parts first"
+
+System: Excellent transfer! That connects to deliberate practice principles.
 ```
 
-### 4. Creating Flashcards (3-5 min)
+### 4. Creating Flashcards (3-5 min) [Learner-Authored]
 
 ```
-System: Based on your retrieval gaps, let's create flashcards.
-        I noticed you missed the "4 hours maximum" concept.
+System: Time to create flashcards from what YOU identified as important.
+        What concepts from pages 45-55 do you want to remember?
+        [Generation effect: You decide what becomes a card]
 
-Suggested card - approve, edit, or skip?
+You: "I want to create a card about the 4-hour maximum for deep work"
 
-FRONT: The maximum daily deep work capacity for most people is {{c1::?}} hours
-BACK: 4 hours (with training, some can extend to 5)
-SOURCE: Deep Work, p. 47
+System: I'll help you format it. What should the question test?
+        a) Simple recall of the number
+        b) Understanding why there's a limit
+        c) Application to your schedule
 
-You: approve
-OR: "edit - change to 3-4 hours"
-OR: "skip"
-OR: "I want to create one about Jung's tower"
+You: a
 
-System: Card created. You've made 5/8 cards for this session.
+System: Here's the format - you provide the content:
+
+FRONT: [What's your question?]
+
+You: "What's the maximum daily deep work capacity for most people?"
+
+BACK: [Your answer?]
+
+You: "4 hours (with training, some can extend to 5)"
+
+System: I'll add the citation. Card created with your content.
+        SOURCE: Deep Work, p. 47
+        You've made 5/8 cards for this session.
 ```
 
-**Creating your own cards:**
+**Creating application cards (your decision):**
 ```
-You: "Create a card about the Jung tower example"
+You: "I want to create a card about the Jung tower example"
 
 System: What should the question test?
         a) Recall facts about Jung's tower
@@ -114,19 +141,22 @@ System: What should the question test?
 
 You: b
 
-System: Here's a draft:
+System: You write the question:
 
-FRONT: Carl Jung built a stone tower to escape Zurich. How does this 
-       demonstrate deep work principles?
-BACK: [What's the answer?]
+FRONT: [Your question about applying Jung's example?]
+
+You: "How did Jung's stone tower demonstrate deep work principles?"
+
+BACK: [Your answer?]
 
 You: "He used physical isolation to create uninterrupted thinking time,
      showing that environment design is crucial for deep work"
 
-System: Card created with your answer.
+System: Card created with your content. I can help refine wording if needed.
+        [AI assists only - you author the learning material]
 ```
 
-### 5. Permanent Notes (8-12 min at session end)
+### 5. Permanent Notes (8-12 min at session end) [Learner-Driven]
 
 ```
 System: Time to create permanent notes. What was the most important 
@@ -151,16 +181,22 @@ EXAMPLE:
 You: "Even famous productive people like Darwin worked intensely for
      3-4 hours in the morning, then walked and corresponded in PM"
 
-CITATION:
-System: Auto-filled: Newport, Deep Work (2016), Ch. 3, p. 47-48
+CITATION (you write to reinforce source awareness):
+You: "Newport, Cal. Deep Work (2016), Chapter 3, pages 47-48"
 
-LINKS:
-System: Related notes found:
-        - [[Attention Residue]]
-        - [[Deliberate Practice]]
-        Select any that connect (or type new ones):
+System: Citation format verified ✓
 
-You: "Link to Attention Residue and add new link to Time Blocking"
+LINKS (you identify connections):
+You: "What existing notes might this connect to?"
+
+System: You have these notes in your vault:
+        - Attention Residue
+        - Deliberate Practice
+        - Time Management
+        - Flow State
+        [Shows titles only - you decide connections]
+
+You: "I'll link to Attention Residue and Time Blocking because..."
 ```
 
 ### 6. Session End (2 min)
@@ -169,24 +205,17 @@ You: "Link to Attention Residue and add new link to Time Blocking"
 You: "Ending session"
 OR: /osl-session end
 
-System: Session summary needed:
-        - Pages read?
+System: Session summary:
+        ✅ 3 micro-loops completed (real-time tracking)
+        ✅ Retrieval rate: 67% (calculated during session)
+        ✅ 5 cards created by you (within limit)
+        ✅ 2 permanent notes with your links
+        ✅ 3/5 curiosity questions resolved
+        ⚠️ 1 misconception identified and logged
         
-You: "15 pages (45-60)"
-
-System: - How many retrieval attempts?
-
-You: "3 chunks"
-
-System: - Successful recalls (felt confident)?
-
-You: "2 good, 1 partial"
-
-System: Session logged:
-        ✅ Retrieval rate: 67%
-        ✅ 5 cards created (3 from misses)
-        ✅ 2 permanent notes
-        ⚠️ Calibration slightly low - you predicted 80% but got 67%
+        Unresolved questions to carry forward:
+        - Question 4: How does this relate to GTD?
+        - Question 5: What about creative work?
         
         Next: Run /osl-review for your 12 due cards
 ```
@@ -281,11 +310,18 @@ System: Synthesis captured. Strong connections between Newport and Clear.
 
 ## Input Format Reference
 
-### Free Recall
+### Curiosity Questions (Start of Session)
+- **Format**: Natural questions in your words
+- **Number**: 5 questions
+- **Tracking**: Note page when answered
+- **CLI**: `osl questions add --question "Your question"`
+
+### Free Recall (Preserved Verbatim)
 - **Format**: Free text, any structure
 - **Length**: 50-200 words
 - **Style**: Bullets, paragraphs, or mixed
 - **Focus**: What you remember, not what you think is important
+- **Preservation**: Your exact text is hashed and stored
 
 ### Feynman Explanations
 - **Format**: Plain language paragraph
@@ -313,19 +349,28 @@ System: Synthesis captured. Strong connections between Newport and Clear.
 - **Citation**: Author, Title (Year), location
 - **Links**: [[Note Name]] format
 
-### Misconception Tracking
+### Misconception Tracking (Learner-Identified)
 ```
-You: "I was confused about the difference between deep work and flow"
+[During micro-loop Q&A]
+You: "Wait, I was wrong about deep work and flow being the same"
 
-System: Let's clarify this misconception:
-        - Your understanding: "They're the same thing"
-        - Correct understanding: [What's the actual difference?]
+System: Let's log this misconception. What did you think?
+
+You: "I thought they were the same thing"
+
+System: And what's the correct understanding?
 
 You: "Deep work is deliberate practice on hard tasks, flow is an
      optimal experience state that might happen during deep work
      but isn't required"
 
-System: Misconception logged and will be reviewed next session.
+System: Misconception logged:
+        Concept: deep work vs flow
+        During: micro_loop_2
+        Will review next session
+        
+CLI: osl misconception add --concept "deep work vs flow" \
+     --wrong "same thing" --correct "practice vs experience"
 ```
 
 ---
@@ -409,7 +454,9 @@ System: Quick decision tree:
 ✅ Tests one concept
 ✅ Clear, unambiguous
 ✅ Includes source
-✅ From actual retrieval miss
+✅ From YOUR identified gaps (not AI-suggested)
+✅ Written in YOUR words (generation effect)
+✅ You decided it was worth remembering
 ```
 
 ### Good Permanent Note
@@ -454,7 +501,10 @@ WEEKLY (90 min)
 SHORTCUTS
 - Stuck? → "Help"
 - Confused? → "I don't understand X"
-- Create? → "Make a card about Y"
+- Create card? → "I want to make a card about Y"
+- Add question? → "osl questions add"
+- Track micro-loop? → "osl microloop complete"
+- Note misconception? → "I was wrong about X"
 - Review? → /osl-review
 - Status? → "How am I doing?"
 ```

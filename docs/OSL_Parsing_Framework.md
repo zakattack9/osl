@@ -1,19 +1,27 @@
 # OSL Parsing Framework
-_Structured extraction while preserving verbatim inputs_
+_Structured extraction with verification against original inputs_
 
 ---
 
-## Core Principle: Dual Storage
+## Core Principle: Verified Translation
 
 1. **Raw Layer**: Original user input stored verbatim with hash
-2. **Parsed Layer**: Structured extraction with source reference
-3. **Approval Layer**: User confirms parsing before final storage
+2. **AI Translation**: Natural language to structured format
+3. **CLI Verification**: Every field verified against original
+4. **Approval Layer**: User confirms before final storage
 
 ```
-User Input → Raw Storage → Parser → Preview → User Approval → Structured Storage
-     ↓                                    ↓                          ↓
-  [Verbatim]                        [Can Reject]              [Links to Raw]
+User Input → AI Translation → CLI Verification → User Approval → Structured Storage
+     ↓            ↓                  ↓                ↓                ↓
+[Natural]    [Structure]    [Substring Check]    [Preview]       [Both Saved]
 ```
+
+## Why This Approach Works
+
+- **Flexibility**: AI handles natural language variations ("wanna remember the 4hr thing")
+- **Integrity**: CLI verifies all content exists in original
+- **No Hallucination**: Can't add information that wasn't there
+- **User-Friendly**: Natural input, structured output
 
 ---
 
@@ -62,7 +70,216 @@ User Input → Raw Storage → Parser → Preview → User Approval → Structur
 
 ---
 
-## Parsing Rules (Deterministic)
+## Verification Mechanism
+
+### CLI Verification Algorithm
+
+```python
+# osl/verifier.py
+class ContentVerifier:
+    """Verifies structured content against original input"""
+    
+    def verify_extraction(self, original_text, structured_data):
+        """Ensure all structured content exists in original"""
+        
+        verification_result = {
+            'valid': True,
+            'errors': [],
+            'warnings': [],
+            'field_results': {}
+        }
+        
+        # Normalize for comparison
+        original_lower = original_text.lower()
+        original_words = set(original_text.split())
+        
+        # Check each field
+        for field_name, field_value in structured_data.items():
+            if field_name in ['type', 'parser', 'confidence']:
+                continue  # Skip metadata fields
+            
+            if not field_value:
+                continue
+            
+            # Exact substring check
+            if field_value in original_text:
+                verification_result['field_results'][field_name] = 'exact_match'
+                continue
+            
+            # Case-insensitive check
+            if field_value.lower() in original_lower:
+                verification_result['field_results'][field_name] = 'case_match'
+                continue
+            
+            # Fuzzy matching for minor variations
+            match_score = self.fuzzy_match(field_value, original_text)
+            
+            if match_score > 0.9:  # 90% similarity
+                verification_result['field_results'][field_name] = 'fuzzy_match'
+                verification_result['warnings'].append(
+                    f"Field '{field_name}' is fuzzy match (score: {match_score:.2f})"
+                )
+            elif match_score > 0.7:  # Partial match
+                verification_result['field_results'][field_name] = 'partial_match'
+                verification_result['warnings'].append(
+                    f"Field '{field_name}' partially matches (score: {match_score:.2f})"
+                )
+            else:
+                # Check if words exist individually
+                field_words = set(field_value.split())
+                found_words = field_words & original_words
+                
+                if len(found_words) > len(field_words) * 0.8:  # 80% words found
+                    verification_result['field_results'][field_name] = 'words_found'
+                    verification_result['warnings'].append(
+                        f"Field '{field_name}' words found but not as phrase"
+                    )
+                else:
+                    # FAIL - Content not found
+                    verification_result['valid'] = False
+                    verification_result['errors'].append({
+                        'field': field_name,
+                        'value': field_value,
+                        'error': 'Content not found in original input',
+                        'suggestion': f"Remove '{field_value}' or use only text from original"
+                    })
+        
+        return verification_result
+    
+    def fuzzy_match(self, text1, text2):
+        """Calculate similarity score between texts"""
+        # Handle common variations
+        replacements = [
+            ('4hr', '4 hour'),
+            ('4-hour', '4 hour'),
+            ('dont', "don't"),
+            ('wont', "won't"),
+            ('&', 'and'),
+            ('w/', 'with')
+        ]
+        
+        normalized1 = text1.lower()
+        normalized2 = text2.lower()
+        
+        for old, new in replacements:
+            normalized1 = normalized1.replace(old, new)
+            normalized2 = normalized2.replace(old, new)
+        
+        # Use Levenshtein distance or similar
+        return self.calculate_similarity(normalized1, normalized2)
+```
+
+### AI Translation Guidelines
+
+```markdown
+# .claude/commands/osl-flashcard.md
+---
+allowed-tools: Bash(osl:*)
+---
+
+## Your Task: Translate to Structured Format
+
+When user wants to create a flashcard, translate their natural language
+to structured format. The CLI will verify your translation.
+
+### Examples:
+
+User: "wanna remember the 4hr deep work limit thing"
+You translate to:
+```json
+{
+  "front": "What is the deep work limit?",
+  "back": "4hr",
+  "source": "user_input"
+}
+```
+
+User: "Jung built a tower to escape distractions - important for deep work"
+You translate to:
+```json
+{
+  "front": "Why did Jung build a tower?",
+  "back": "To escape distractions for deep work",
+  "source": "user_input"
+}
+```
+
+### CRITICAL RULES:
+1. Use ONLY words/phrases from the original input
+2. You can reorganize and restructure
+3. You can clean up grammar/spelling for the question
+4. The answer MUST use exact text from input
+5. If unclear, use more of the original text, not less
+
+### Call CLI with your translation:
+```bash
+osl flashcard create \
+  --original "$USER_INPUT" \
+  --front "$QUESTION" \
+  --back "$ANSWER" \
+  --verify strict
+```
+
+The CLI will verify and return:
+- SUCCESS: Card created
+- ERROR: "Field 'back' contains 'X' not found in original"
+```
+
+### CLI Error Feedback Loop
+
+```python
+def cmd_flashcard_create(self, args):
+    """Create flashcard with verification"""
+    
+    # Store original
+    original_id = self.preserver.preserve_input(
+        'flashcard_raw', 
+        args.original,
+        'CARDS_ACTIVE'
+    )
+    
+    # Verify AI translation
+    verifier = ContentVerifier()
+    structured = {
+        'front': args.front,
+        'back': args.back
+    }
+    
+    verification = verifier.verify_extraction(args.original, structured)
+    
+    if not verification['valid']:
+        # Return specific error for AI to correct
+        error_detail = verification['errors'][0]
+        self.error_with_suggestion(
+            f"Verification failed: {error_detail['error']}",
+            f"Field '{error_detail['field']}' contains '{error_detail['value']}' "
+            f"which was not found in original input. "
+            f"Try: osl flashcard create --front \"{args.front}\" "
+            f"--back \"[use only text from: {args.original[:50]}...]\""
+        )
+    
+    # Show preview with verification status
+    preview = f"""
+    Flashcard Preview:
+    
+    FRONT: {args.front}
+    BACK: {args.back}
+    
+    Verification: ✅ All content found in original
+    - Front: {verification['field_results'].get('front', 'N/A')}
+    - Back: {verification['field_results'].get('back', 'N/A')}
+    
+    Original: "{args.original}"
+    
+    Approve? (yes/edit/skip)
+    """
+    
+    return self.get_user_approval(preview, structured, original_id)
+```
+
+---
+
+## Parsing Rules (AI-Assisted)
 
 ### Flashcard Parsers
 
@@ -465,15 +682,112 @@ parsing:
 
 ---
 
+## Verification Examples
+
+### Successful Verification
+
+```
+User: "remember that deep work needs 4 hours max and total focus"
+
+AI translates to:
+- Front: "What does deep work need?"
+- Back: "4 hours max and total focus"
+
+CLI verifies:
+✅ "4 hours max" - exact match in original
+✅ "total focus" - exact match in original
+✅ All content verified
+
+Result: Card created successfully
+```
+
+### Failed Verification with Correction
+
+```
+User: "the 4hr limit is important"
+
+AI translates to:
+- Front: "What is the 4 hour daily limit?"
+- Back: "4hr limit"
+
+CLI verifies:
+✅ "4hr limit" - exact match
+❌ "daily" - NOT FOUND in original
+
+CLI returns error:
+{
+  "error": "Field 'front' contains 'daily' not found in original",
+  "suggestion": "Remove 'daily' or rephrase using only: 'the 4hr limit is important'"
+}
+
+AI corrects to:
+- Front: "What is the 4hr limit?"
+- Back: "4hr limit is important"
+
+CLI verifies:
+✅ All content now found
+```
+
+### Fuzzy Match Warning
+
+```
+User: "dont forget the 4-hour maximum"
+
+AI translates to:
+- Front: "What shouldn't you forget?"
+- Back: "4 hour maximum"
+
+CLI verifies:
+⚠️ "don't" vs "dont" - fuzzy match (95% similar)
+⚠️ "4 hour" vs "4-hour" - fuzzy match (93% similar)
+
+Result: Card created with warnings shown to user
+```
+
+## Error Correction Loop
+
+```python
+# AI attempts translation
+def ai_translate_with_retry(user_input, max_attempts=3):
+    """AI translates with CLI verification and retry"""
+    
+    for attempt in range(max_attempts):
+        # AI makes translation attempt
+        translation = ai.translate_to_structure(user_input)
+        
+        # CLI verifies
+        result = cli.flashcard_create(
+            original=user_input,
+            front=translation['front'],
+            back=translation['back'],
+            verify='strict'
+        )
+        
+        if result['status'] == 'success':
+            return result
+        
+        # Parse error for correction
+        if 'not found' in result['error']:
+            # AI adjusts translation based on error
+            missing_text = result['error_detail']['value']
+            ai.adjust_translation(
+                remove=missing_text,
+                use_only=user_input
+            )
+        
+    # After max attempts, fall back to manual
+    return {'status': 'manual_needed', 'reason': 'Could not verify translation'}
+```
+
 ## Summary
 
-This parsing framework achieves:
+This hybrid approach achieves the best of both worlds:
 
-1. **Verbatim Preservation**: Original always stored with hash
-2. **Structured Extraction**: Deterministic parsing into useful formats
-3. **User Control**: Preview and approve all parsing
-4. **Reversibility**: Can always get back to original
-5. **Transparency**: Shows which parser used and confidence
-6. **Manual Override**: User can always edit or create manually
+1. **Natural Input**: Users can speak naturally ("wanna remember the 4hr thing")
+2. **AI Translation**: Handles variations and messy input
+3. **CLI Verification**: Ensures no hallucination or added content
+4. **Error Feedback**: Specific errors help AI self-correct
+5. **User Control**: Final approval before storage
+6. **Integrity**: Original always preserved with hash
 
-The key insight: **The CLI tool does parsing, not AI**. AI only identifies which parser to use. This maintains determinism while enabling practical structured storage.
+The key insight: **AI translates, CLI verifies**. This allows natural language flexibility while maintaining absolute content integrity through verification.

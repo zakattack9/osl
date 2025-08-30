@@ -65,12 +65,18 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 
 ---
 
-## 6. Micro-Loop Reading Cycle (repeat for 5–10 Pages or 1 scene/chapter)
+## 6. Micro-Loop Reading Cycle (repeat based on material type)
+
+**Chunk sizes by material:**
+- Technical books: 5–10 pages (standard)
+- Dense/complex material: 3–5 pages
+- Literature: 1 scene or chapter
+- Lists/reference: Natural sections
 
 1. **Question**: Select 1–3 guiding questions.
 2. **Read**: Focused chunk, minimal highlights (claims, data, examples).
 3. **Retrieve**: Free recall for 1–2 minutes on a blank page.
-4. **Explain**: Write or speak a short Feynman explanation (define, example, contrast, limitation).
+4. **Explain**: Write or speak a Feynman explanation (3-5 sentences: define, example, contrast, limitation).
 5. **Feedback**: Tutor generates 2–3 questions; learner answers; Tutor gives corrective feedback.
 
 ---

@@ -265,31 +265,35 @@ Handle errors by reading JSON and retrying with suggestions.
 ```markdown
 ---
 name: osl-tutor
-description: OSL Tutor for micro-loop Q&A. Use PROACTIVELY after reading chunks. Generates retrieval questions, provides feedback, tracks gaps.
+description: OSL Tutor for micro-loop Q&A. Use PROACTIVELY after reading chunks. Generates retrieval questions AFTER learner's free recall, provides feedback, tracks gaps.
 tools: Read, Write
 ---
 
 You are an OSL Tutor implementing research-backed learning principles.
 
-## Your Role in the Micro-Loop
+## Your Role in the Micro-Loop (AFTER learner's retrieval)
 
-When invoked after reading 5-10 pages:
+When invoked AFTER learner completes free recall and Feynman explanation:
 
-1. **Generate 2-3 Progressive Questions**
+1. **Generate 2-3 Progressive Questions** (Testing Effect)
+   - Based on what learner just read and attempted to recall
    - Start with recall: "What are the key concepts from pages X-Y?"
    - Move to application: "How would you apply [concept] to [scenario]?"
    - End with transfer: "How does this relate to [previous learning]?"
+   - Questions target material, NOT learner's recall quality
 
 2. **Provide Corrective Feedback**
    - Brief and specific
    - Always cite page/location
    - Focus on misconceptions
    - No grades during micro-loops
+   - Immediate feedback enhances the testing effect
 
 3. **Track Learning Gaps**
-   - Flag concepts that need flashcards
-   - Note misconceptions for later review
-   - End with: "Key gaps identified: [list]"
+   - Note what learner self-identifies as difficult
+   - Track misconceptions for later review
+   - End with: "Key gaps you identified: [list]"
+   - DO NOT suggest flashcards - learner decides
 
 ## Session Validation (when requested)
 
@@ -980,46 +984,96 @@ All state is managed through file-based persistence in `ai_state/`:
 ### Core State Files
 
 ```json
-// coach_state.json - Central learning state
+// coach_state.json - Central learning state (AUTHORITATIVE)
 {
+  "last_updated": "YYYY-MM-DD HH:MM",
   "active_books": [{
     "id": "deep_work_2024",
     "title": "Deep Work",
+    "author": "Cal Newport",
+    "start_date": "2024-01-01",
     "current_page": 147,
     "total_pages": 296,
     "sessions_completed": 12,
-    "avg_retrieval_rate": 0.82
+    "avg_retrieval_score": 82
   }],
-  "metrics": {
-    "calibration_score": 85,
-    "card_debt_ratio": 1.3,
-    "last_transfer_project": "2024-01-15",
-    "weekly_sessions": 5,
-    "total_cards_created": 127,
-    "total_permanent_notes": 23
+  "review_schedule": {
+    "next_interleaving": "YYYY-MM-DD",
+    "next_calibration": "YYYY-MM-DD",
+    "next_synthesis": "YYYY-MM-DD",
+    "next_project": "YYYY-MM-DD"
   },
-  "governance": {
-    "calibration_gate_status": "passing",
-    "card_debt_gate_status": "passing",
-    "transfer_gate_status": "warning"
+  "performance_metrics": {
+    "7d_avg_retrieval": 82,
+    "7d_avg_prediction_accuracy": 85,
+    "current_card_debt_ratio": 1.3,
+    "daily_review_throughput": 60
+  },
+  "governance_status": {
+    "calibration_gate": "passing",  // 75-85% range
+    "card_debt_gate": "passing",     // 1.5x-2.5x range
+    "transfer_gate": "warning",      // monthly requirement
+    "remediation_active": false
+  },
+  "governance_thresholds": {
+    "calibration_gate": {"min": 75, "default": 80, "max": 85},
+    "card_debt_multiplier": {"min": 1.5, "default": 2.0, "max": 2.5},
+    "max_new_cards": {"min": 4, "default": 8, "max": 10},
+    "interleaving_per_week": {"min": 1, "default": 2, "max": 3}
   }
 }
 ```
 
 ```json
-// session_history.json - Detailed session logs
+// session_history.json - Detailed session logs with micro-loop tracking
 {
   "sessions": [{
     "id": "session_2024_01_20_001",
     "timestamp": "2024-01-20T09:30:00Z",
     "book": "deep_work",
     "pages_read": 15,
-    "retrieval_attempts": 8,
-    "successful_recalls": 7,
-    "cards_created": 5,
+    "curiosity_questions": [
+      {
+        "id": 1,
+        "question": "How does deep work relate to flow state?",
+        "created": "09:32:00",
+        "resolved": true,
+        "answer": "Deep work requires deliberate practice, flow is the experience",
+        "page_found": 48
+      }
+    ],
+    "micro_loops": [
+      {
+        "pages": "45-50",
+        "start_time": "09:35:00",
+        "recall_quality": "complete",
+        "recall_text_hash": "a3f5d8c9...",  // SHA256 of verbatim text
+        "feynman_text_hash": "b7e2a1d4...",
+        "confidence": 4,
+        "gaps_identified": ["4-hour limit"],
+        "tutor_questions_asked": 3,
+        "correct_answers": 3
+      }
+    ],
+    "misconceptions": [
+      {
+        "concept": "deep work vs flow",
+        "wrong_understanding": "They are the same",
+        "correct_understanding": "Deep work is practice, flow is experience",
+        "identified_during": "micro_loop_2"
+      }
+    ],
+    "flashcards_created": [
+      {
+        "id": "card_001",
+        "learner_authored": true,
+        "content_hash": "c4d9e2f1...",
+        "from_gap": "4-hour limit"
+      }
+    ],
     "permanent_notes": 2,
-    "duration_minutes": 47,
-    "commands_used": ["/osl-session", "/osl-tutor", "/osl-review"]
+    "retrieval_rate_realtime": 87,  // Calculated during session
+    "duration_minutes": 47
   }]
 }
 ```
@@ -1482,39 +1536,62 @@ osl                         # Main CLI entry point
 │   ├── start              # Begin reading session
 │   ├── end                # End with metrics
 │   └── status             # Current session info
-├── review/                # Retrieval practice
+├── questions/             # Curiosity question tracking [LEARNING]
+│   ├── add                # Add curiosity question
+│   ├── list               # Show current questions
+│   ├── resolve            # Mark question as answered
+│   └── pending            # Show unresolved questions
+├── microloop/             # Micro-loop tracking [LEARNING]
+│   ├── complete           # Record micro-loop completion
+│   ├── recall             # Save free recall (verbatim)
+│   └── explain            # Save Feynman explanation (verbatim)
+├── flashcard/             # Flashcard management [LEARNING]
+│   ├── create             # Learner creates card
+│   ├── list               # Show session cards
+│   └── check-limit        # Check against 8-card limit
+├── misconception/         # Misconception tracking [LEARNING]
+│   ├── add                # Learner identifies misconception
+│   ├── list               # Show current misconceptions
+│   └── resolve            # Mark as corrected
+├── review/                # Retrieval practice [ADMIN]
 │   ├── due                # Show due items
 │   ├── quiz               # Run quiz session
 │   └── calibrate          # Calibration test
-├── synthesis/             # Integration commands
+├── synthesis/             # Integration commands [LEARNING]
 │   ├── weekly             # Weekly synthesis
 │   └── project            # Transfer projects
-├── metrics/               # Calculations & queries
+├── metrics/               # Calculations & queries [ADMIN]
 │   ├── calculate          # Compute metrics
 │   ├── track              # Record events
 │   └── report             # Generate reports
-├── state/                 # State management
+├── state/                 # State management [ADMIN]
 │   ├── query              # Read state values
 │   ├── update             # Modify state
 │   └── backup             # Create backup
-├── context/               # AI context generation
+├── context/               # AI context generation [ADMIN]
 │   ├── get                # Retrieve context
 │   └── summary            # Generate summaries
-└── config/                # Configuration
+└── config/                # Configuration [ADMIN]
     ├── init               # Initial setup
     └── validate           # Check configuration
 ```
 
-### CLI Implementation
+### CLI Implementation with Verbatim Preservation
 ```python
 #!/usr/bin/env python3
-# osl_cli.py - Main CLI tool
+# osl_cli.py - Main CLI tool with Learning/Admin boundaries
 import argparse
 import json
 import sys
+import hashlib
 from pathlib import Path
 from datetime import datetime
 import logging
+
+class CommandType:
+    """Explicit boundary between learning and admin tasks"""
+    LEARNING = "LEARNING"  # Requires human cognition
+    ADMIN = "ADMIN"        # Can be automated
 
 class OSLCli:
     """OSL Command Line Interface - Single source of truth for all operations"""
@@ -1522,6 +1599,7 @@ class OSLCli:
     def __init__(self):
         self.config_path = Path.home() / '.osl' / 'config.json'
         self.state_path = Path('ai_state/coach_state.json')
+        self.session_path = Path('ai_state/current_session.json')
         self.setup_logging()
         
     def setup_logging(self):
@@ -1530,6 +1608,16 @@ class OSLCli:
             format='%(levelname)s: %(message)s',
             level=logging.INFO
         )
+        
+    def preserve_verbatim(self, text, activity_type):
+        """Preserve learner's exact input with hash verification"""
+        return {
+            'raw': text,
+            'hash': hashlib.sha256(text.encode()).hexdigest(),
+            'timestamp': datetime.now().isoformat(),
+            'type': activity_type,
+            'preserved': True
+        }
         
     def error_with_suggestion(self, message, suggestion=None, code=1):
         """Provide clear error messages for AI self-correction"""
@@ -1553,8 +1641,146 @@ class OSLCli:
         return 0
 
     # Command implementations
+    def cmd_questions_add(self, args):
+        """[LEARNING] Add curiosity question"""
+        self.command_type = CommandType.LEARNING
+        
+        session = self.load_current_session()
+        question = {
+            'id': len(session.get('curiosity_questions', [])) + 1,
+            'question': args.question,
+            'created': datetime.now().isoformat(),
+            'resolved': False,
+            'answer': None,
+            'page_found': None
+        }
+        
+        if 'curiosity_questions' not in session:
+            session['curiosity_questions'] = []
+        session['curiosity_questions'].append(question)
+        
+        self.save_current_session(session)
+        return self.success_response({
+            'question_id': question['id'],
+            'message': f"Question {question['id']} added"
+        })
+    
+    def cmd_microloop_complete(self, args):
+        """[LEARNING] Record micro-loop completion with real-time metrics"""
+        self.command_type = CommandType.LEARNING
+        
+        session = self.load_current_session()
+        
+        # Preserve recall and explanation verbatim
+        recall_preserved = self.preserve_verbatim(args.recall_text, 'free_recall')
+        explain_preserved = self.preserve_verbatim(args.explain_text, 'feynman')
+        
+        micro_loop = {
+            'pages': args.pages,
+            'timestamp': datetime.now().isoformat(),
+            'recall_quality': args.recall_quality,
+            'recall_text_hash': recall_preserved['hash'],
+            'feynman_text_hash': explain_preserved['hash'],
+            'confidence': args.confidence,
+            'gaps_identified': args.gaps.split(',') if args.gaps else []
+        }
+        
+        if 'micro_loops' not in session:
+            session['micro_loops'] = []
+        session['micro_loops'].append(micro_loop)
+        
+        # Calculate real-time retrieval rate
+        total = len(session['micro_loops'])
+        successful = sum(1 for ml in session['micro_loops'] 
+                        if ml['recall_quality'] in ['complete', 'good'])
+        retrieval_rate = (successful / total) * 100 if total > 0 else 0
+        
+        session['retrieval_rate_realtime'] = retrieval_rate
+        
+        # Check governance gates in real-time
+        governance_warnings = []
+        if retrieval_rate < 80:
+            governance_warnings.append("Retrieval below 80% - consider review")
+        
+        self.save_current_session(session)
+        return self.success_response({
+            'micro_loop_count': total,
+            'retrieval_rate': f'{retrieval_rate:.1f}%',
+            'warnings': governance_warnings
+        })
+    
+    def cmd_misconception_add(self, args):
+        """[LEARNING] Learner identifies misconception"""
+        self.command_type = CommandType.LEARNING
+        
+        session = self.load_current_session()
+        misconception = {
+            'concept': args.concept,
+            'wrong_understanding': args.wrong,
+            'correct_understanding': args.correct,
+            'identified_during': f"micro_loop_{len(session.get('micro_loops', []))}",
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if 'misconceptions' not in session:
+            session['misconceptions'] = []
+        session['misconceptions'].append(misconception)
+        
+        self.save_current_session(session)
+        return self.success_response({
+            'misconception_tracked': args.concept,
+            'message': 'Misconception logged for review'
+        })
+    
+    def cmd_flashcard_create(self, args):
+        """[LEARNING] Learner creates flashcard (enforces limits)"""
+        self.command_type = CommandType.LEARNING
+        
+        session = self.load_current_session()
+        current_cards = len(session.get('flashcards_created', []))
+        
+        # Check governance limits
+        state = self.load_state()
+        max_cards = state['governance_thresholds']['max_new_cards']['default']
+        if state['governance_status']['calibration_gate'] == 'failing':
+            max_cards = state['governance_thresholds']['max_new_cards']['min']
+        
+        if current_cards >= max_cards:
+            return self.error_with_suggestion(
+                f"Card limit ({max_cards}) reached for this session",
+                "Review existing cards or save for next session"
+            )
+        
+        # Preserve card content verbatim
+        card_preserved = self.preserve_verbatim(
+            f"FRONT: {args.front}\nBACK: {args.back}",
+            'flashcard'
+        )
+        
+        card = {
+            'id': f"card_{current_cards + 1:03d}",
+            'learner_authored': True,
+            'content_hash': card_preserved['hash'],
+            'from_gap': args.gap if args.gap else None,
+            'source': args.source,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if 'flashcards_created' not in session:
+            session['flashcards_created'] = []
+        session['flashcards_created'].append(card)
+        
+        self.save_current_session(session)
+        return self.success_response({
+            'card_id': card['id'],
+            'cards_created': current_cards + 1,
+            'remaining': max_cards - (current_cards + 1)
+        })
+    
     def cmd_book_start(self, args):
-        """Initialize new book with all OSL structure"""
+        """[ADMIN] Initialize new book with all OSL structure"""
+        self.command_type = CommandType.ADMIN
+        
         if not args.book:
             self.error_with_suggestion(
                 "No book title provided",
@@ -1712,6 +1938,49 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+```
+
+### Example CLI Usage
+
+```bash
+# Curiosity Questions (LEARNING)
+osl questions add --question "How does deep work relate to flow state?"
+osl questions list --session current
+osl questions resolve --id 1 --answer "Found on p48: different concepts" --page 48
+osl questions pending
+
+# Micro-Loop Tracking (LEARNING) - Real-time metrics
+osl microloop complete \
+  --pages "45-50" \
+  --recall-quality "complete" \
+  --confidence 4 \
+  --gaps "4-hour limit" \
+  --recall-text "$(cat recall.txt)" \
+  --explain-text "$(cat feynman.txt)"
+
+# Misconception Tracking (LEARNING)
+osl misconception add \
+  --concept "deep work vs flow" \
+  --wrong "They are the same" \
+  --correct "Deep work is practice, flow is experience"
+
+# Flashcard Creation (LEARNING) - Learner authored
+osl flashcard create \
+  --front "What's the daily limit for deep work?" \
+  --back "4 hours (up to 5 with training)" \
+  --source "Deep Work p.47" \
+  --gap "4-hour limit"
+
+osl flashcard check-limit  # Shows remaining cards allowed
+
+# Session Management (ADMIN)
+osl session start --book "Deep Work"
+osl session status  # Shows real-time retrieval rate
+osl session end     # Automatic metrics from micro-loops
+
+# Metrics (ADMIN) - All calculations delegated
+osl metrics calculate --type retrieval --success 7 --total 8
+osl metrics report --type progress --period week
 ```
 
 ### Installation
@@ -2000,14 +2269,16 @@ if __name__ == "__main__":
 
 ## Critical Design Clarifications
 
-### 1. Quiz Generation Philosophy
-Based on OSL's retrieval practice principle, quizzes are **AI-generated targeting actual gaps**:
-- **Micro-loop quizzes**: 2-3 questions generated by Tutor after each reading chunk
-- **Weekly calibration**: 6-10 items (3 recall, 3-4 application, 2-3 transfer)
-- **Source**: Questions derived from failed retrievals and identified misconceptions
+### 1. Quiz Generation Philosophy (Testing Effect + Calibration)
+Based on research evidence for testing effect and calibration:
+- **Micro-loop questions**: 2-3 AI-generated AFTER learner's free recall (preserves effortful retrieval)
+- **Weekly calibration**: 6-10 AI-generated items (3 recall, 3-4 application, 2-3 transfer)
+- **Pre-reading probe**: ≤90s, 3 items, optional, simple prerequisites only
+- **Source**: AI generates from material covered, not from "gaps" (learner identifies gaps)
 - **Storage**: Generated quizzes saved for reuse and refinement
+- **Evidence**: Testing effect (Roediger & Karpicke, 2006) + immediate feedback (Hattie & Timperley, 2007)
 
-### 2. Flashcard Pipeline (Anki Integration)
+### 2. Flashcard Pipeline (Learner-Authored, AI-Assisted)
 ```json
 // anki/cards/{session_id}.json
 {
@@ -2027,7 +2298,9 @@ Based on OSL's retrieval practice principle, quizzes are **AI-generated targetin
       "tags": ["book/osl_v3", "concept/micro_loop", "type/cloze"],
       "created": "2025-01-29T10:30:00Z",
       "from_miss": true,
-      "context": "Failed recall during micro-loop 3"
+      "learner_authored": true,
+      "ai_refined": false,
+      "context": "I failed to recall this during micro-loop 3"
     },
     {
       "id": "uuid-5678",
@@ -2097,6 +2370,17 @@ osl note suggest --from-retrieval "last-session"
 osl session end --book "Deep Work"
 osl session start --book "Atomic Habits"
 ```
+
+### Flashcard Creation Philosophy (Generation Effect)
+**Research-grounded approach:**
+- **Learner authors cards** from their identified misses (generation effect)
+- **AI assists only with**:
+  - Formatting (cloze syntax)
+  - Citation verification
+  - Flagging ambiguity
+  - Suggesting refinements (learner approves)
+- **Never**: AI creates cards automatically from "gaps"
+- **Always**: Learner decides what becomes a card
 
 ### 6. Subagent Context Generation
 ```bash

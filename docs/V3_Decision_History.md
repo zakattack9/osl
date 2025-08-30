@@ -147,3 +147,96 @@ _Archive of all modifications evaluated through the Six-Gate Framework, document
 - **Flexibility over rigidity** in scheduling and requirements
 - **Natural over artificial** boundaries and milestones
 - **Evidence over intuition** for all design decisions
+
+---
+
+## Version 3.3 - AI Role Clarifications (Research-Grounded)
+
+**AI-Generated Retrieval Questions (Accepted with Guardrails v3.3)**
+- Proposed: AI generates 2-3 questions after learner's free recall to enhance testing effect
+- Gates Analysis:
+  - Gate 1: PASS - Directly supports retrieval practice principle
+  - Gate 2: PASS - Adds corrective feedback signal not present in solo recall
+  - Gate 3: PASS - Happens AFTER learner's retrieval, preserves effortful recall
+  - Gate 4: PASS - High ROI: Testing effect + immediate feedback documented benefits
+  - Gate 5: PASS - Simple addition to existing micro-loop
+  - Gate 6: STRONG PASS - Roediger & Karpicke (2006): Testing effect; Hattie & Timperley (2007): Feedback impact
+- Decision: ACCEPTED - AI generates questions AFTER learner completes free recall and Feynman explanation
+- Guardrails: 
+  - Questions target the material, not learner's recall quality
+  - Tiered progression: recall → application → transfer
+  - Must include corrective feedback with citations
+- Lesson: AI enhancement is acceptable when it amplifies proven learning mechanisms without replacing learner effort
+
+**AI-Generated Flashcards (Rejected for Auto-Generation v3.3)**
+- Proposed: AI automatically creates flashcards from identified gaps
+- Gates Analysis:
+  - Gate 1: PARTIAL - Supports spacing but violates self-explanation
+  - Gate 2: FAIL - Generation effect requires learner authorship
+  - Gate 3: PASS - Happens at session boundaries
+  - Gate 4: FAIL - Bypasses generation effect (Slamecka & Graf, 1978)
+  - Gate 5: FAIL - Removes critical metacognitive decision: "What's worth remembering?"
+  - Gate 6: STRONG FAIL - Generation effect research shows self-created > provided materials
+- Decision: REJECTED for auto-generation; ACCEPTED for AI assistance only
+- AI Limited To:
+  - Formatting help (cloze syntax)
+  - Citation verification
+  - Flagging ambiguity
+  - Suggesting refinements (learner must approve)
+- Lesson: The act of deciding what becomes a flashcard IS the learning activity
+
+**AI-Generated Weekly Quizzes (Accepted v3.3)**
+- Proposed: AI generates 6-10 item weekly calibration quiz
+- Gates Analysis:
+  - Gate 1: PASS - Directly supports calibration principle
+  - Gate 2: PASS - Provides external assessment for accuracy calibration
+  - Gate 3: PASS - Weekly boundary, no loop interruption
+  - Gate 4: PASS - Low-stakes quizzing improves retention (testing effect)
+  - Gate 5: PASS - Reduces burden of quiz creation
+  - Gate 6: STRONG PASS - Testing effect literature; AIG (Automatic Item Generation) research
+- Decision: ACCEPTED for weekly calibration (6-10 items: 3 recall, 3-4 application, 2-3 transfer)
+- Constraints:
+  - Blueprint-based generation (not "gap"-based)
+  - Rubric scoring with feedback
+  - Items saved for reuse/refinement
+- Lesson: AI quiz generation acceptable when serving calibration, not diagnostic purposes
+
+**Pre-Reading Diagnostic (Modified to Minimal Probe v3.3)**
+- Proposed: Keep full pre-diagnostic quiz with AI generation
+- Gates Analysis:
+  - Gate 1: WEAK - Activation helps but full quiz premature
+  - Gate 2: FAIL - Weekly calibration provides this signal
+  - Gate 3: PASS - Before reading
+  - Gate 4: FAIL - Cannot test application/transfer before learning
+  - Gate 5: FAIL - Overhead for minimal benefit
+  - Gate 6: MIXED - Pretesting benefits exist but only for simple recall
+- Decision: MODIFIED to optional ≤90s, 3-item recall probe for prerequisites only
+- Lesson: Pretesting activation good; premature assessment counterproductive
+
+---
+
+## Research Citations Supporting v3.3 Decisions
+
+1. **Testing Effect**: Roediger, H. L., & Karpicke, J. D. (2006). Test-enhanced learning: Taking memory tests improves long-term retention. *Psychological Science*, 17(3), 249-255.
+
+2. **Feedback Impact**: Hattie, J., & Timperley, H. (2007). The power of feedback. *Review of Educational Research*, 77(1), 81-112.
+
+3. **Generation Effect**: Slamecka, N. J., & Graf, P. (1978). The generation effect: Delineation of a phenomenon. *Journal of Experimental Psychology: Human Learning and Memory*, 4(6), 592-604.
+
+4. **Effective Learning Techniques**: Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2013). Improving students' learning with effective learning techniques. *Psychological Science in the Public Interest*, 14(1), 4-58.
+
+5. **Automatic Item Generation**: Gierl, M. J., & Haladyna, T. M. (Eds.). (2012). *Automatic item generation: Theory and practice*. Routledge.
+
+---
+
+## Summary of Current AI Role Boundaries
+
+| Activity | AI Role | Learner Role | Evidence |
+|----------|---------|--------------|----------|
+| **Retrieval Questions** | ✅ Generate after learner's recall | Complete free recall first | Testing effect research |
+| **Flashcards** | ⚠️ Assist with format/citations only | Author all cards | Generation effect |
+| **Weekly Quiz** | ✅ Generate and score | Take quiz, review feedback | Testing + calibration |
+| **Pre-reading** | ✅ Optional 3-item probe only | Decide if needed | Activation research |
+| **Permanent Notes** | ❌ No generation | Write all notes | Self-explanation |
+| **Curiosity Questions** | ❌ No generation | Generate all questions | Curiosity principle |
+| **Synthesis Essays** | ❌ No generation | Write all essays | Transfer principle |
