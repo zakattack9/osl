@@ -109,10 +109,45 @@ ruff osl_cli/
 mypy osl_cli/
 ```
 
+## Implementation Status
+
+### ✅ Completed (Phase 1 - 85%)
+- Core state management (schemas v3.0)
+- Basic command structure
+- Session lifecycle management
+- Micro-loop tracking
+- Flashcard creation (learner-authored)
+- Governance gate checking
+- Rich terminal UI
+
+### ⏳ TODO (Priority Order)
+
+1. **Complete Phase 1 Commands**
+   - `book.py` - Book management
+   - `questions.py` - Curiosity question tracking
+   - `misconception.py` - Error tracking
+   - `review.py` - Spaced repetition scheduling
+   - `synthesis.py` - Weekly integration
+   - `metrics.py` - Performance calculations
+
+2. **State Validation**
+   - State machine enforcement
+   - Content hashing (SHA256)
+   - Migration system
+   - Verbatim preservation
+
+3. **AI Integration**
+   - Boundaries enforcement
+   - Tutor role implementation
+   - Timing restrictions
+   - Question generation (post-recall only)
+
 ## Documentation
 
 See `/docs/` directory for complete OSL documentation:
-- `README.md` - Implementation guide
+- `README.md` - Complete implementation roadmap
 - `V3_Core.md` - Core methodology
 - `OSL_AI_Boundaries.md` - AI interaction rules
 - `OSL_Flashcard_Philosophy.md` - Generation effect protection
+- `OSL_State_Schema.md` - Authoritative data structures
+- `OSL_Governance_Standards.md` - Adaptive thresholds
