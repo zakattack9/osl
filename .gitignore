@@ -29,3 +29,9 @@ Thumbs.db
 *_private.md
 *_personal.md
 config/secrets.yaml
+
+
+__pycache__
+.pytest_cache
+.venv
+*.egg-info

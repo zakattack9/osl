@@ -14,6 +14,12 @@ from osl_cli.commands.flashcard import flashcard
 from osl_cli.commands.quiz import quiz
 from osl_cli.commands.governance import governance
 from osl_cli.commands.state import state
+from osl_cli.commands.book import book_group
+from osl_cli.commands.questions import questions_group
+from osl_cli.commands.misconception import misconception_group
+from osl_cli.commands.review import review_group
+from osl_cli.commands.synthesis import synthesis_group
+from osl_cli.commands.metrics import metrics_group
 
 console = Console()
 
@@ -45,6 +51,12 @@ cli.add_command(flashcard)
 cli.add_command(quiz)
 cli.add_command(governance)
 cli.add_command(state)
+cli.add_command(book_group)
+cli.add_command(questions_group)
+cli.add_command(misconception_group)
+cli.add_command(review_group)
+cli.add_command(synthesis_group)
+cli.add_command(metrics_group)
 
 
 if __name__ == "__main__":
