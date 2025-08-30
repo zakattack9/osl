@@ -206,7 +206,7 @@ osl-cli/
 #### 2.2 State Machine Enforcement
 Valid transitions with prerequisites:
 ```
-SESSION_INIT 
+SESSION_INIT
   → PREVIEW (requires: book selected)
   → READING (requires: curiosity questions)
   → RECALL_PENDING (requires: reading complete)
@@ -229,13 +229,13 @@ SESSION_INIT
 ### Phase 3: Governance Engine
 
 #### 3.1 Adaptive Thresholds
-| Gate | Range | Default | Measurement | Action When Failing |
-|------|-------|---------|-------------|---------------------|
-| Calibration | 75-85% | 80% | 7-day retrieval avg | Pause new content |
-| Card Debt | 1.5×-2.5× | 2.0× | Due ÷ throughput | Block new cards |
-| New Cards | 4-10 | 8 | Per session | Enforce cap |
-| Interleaving | 1-3/week | 2/week | Sessions tracked | Schedule mixing |
-| Transfer | Monthly | Required | Projects completed | Block new books |
+| Gate         | Range     | Default  | Measurement         | Action When Failing |
+| ------------ | --------- | -------- | ------------------- | ------------------- |
+| Calibration  | 75-85%    | 80%      | 7-day retrieval avg | Pause new content   |
+| Card Debt    | 1.5×-2.5× | 2.0×     | Due ÷ throughput    | Block new cards     |
+| New Cards    | 4-10      | 8        | Per session         | Enforce cap         |
+| Interleaving | 1-3/week  | 2/week   | Sessions tracked    | Schedule mixing     |
+| Transfer     | Monthly   | Required | Projects completed  | Block new books     |
 
 #### 3.2 Gate Implementation
 ```python
@@ -262,12 +262,12 @@ class AIBoundaries:
         # 1. Free recall complete (verbatim stored)
         # 2. Feynman explanation complete (hashed)
         # NEVER during reading or recall phases
-        
+
     def can_generate(self, content_type):
         # AI can generate:
         # - Quiz questions (weekly calibration only)
         # - Progressive questions (2-3 after recall)
-        # 
+        #
         # AI CANNOT generate:
         # - Flashcards (generation effect)
         # - Curiosity questions (learner-driven)
@@ -324,7 +324,7 @@ def manage_schedule():
       - Choose 1-3 guiding questions
    b. Read (5-10 pages)
       - Technical: 5-10 pages
-      - Dense: 3-5 pages  
+      - Dense: 3-5 pages
       - Literature: 1 scene/chapter
    c. Free Recall (1-2 min)
       - CLOSE BOOK FIRST
@@ -433,7 +433,7 @@ def sync_cards():
     # Connect to local Anki
     # Create/update deck: "OSL::BookName"
     # Add cards with cloze format
-    
+
 # Fallback: APKG export
 def export_cards():
     # Generate .apkg file
@@ -478,10 +478,10 @@ def auto_commit():
 ```
 Layer 1: Direct CLI
   osl session start --book "Deep Work"
-  
-Layer 2: Slash Commands  
+
+Layer 2: Slash Commands
   /osl-session start Deep Work
-  
+
 Layer 3: Natural Language
   "Let's start reading Deep Work"
   → Show: "Interpreting as: osl session start --book 'Deep Work'"
@@ -504,10 +504,10 @@ def activation_probe():
     # - 90 seconds total time
     # - Simple recall questions only
     # - NOT a full diagnostic quiz
-    # 
+    #
     # Purpose: Prime relevant knowledge
     # Never: Test comprehensive understanding
-    
+
     return {
         "items": 3,
         "time_limit": 90,
@@ -522,7 +522,7 @@ def detect_interleaving():
     # Monitor: Topic switches in session
     # Threshold: 30-50% mixed content
     # Track: Weekly frequency
-    
+
 def schedule_interleaving():
     # Default: 2× per week
     # Duration: 20-30 minutes
@@ -537,7 +537,7 @@ def track_misconception():
     # Schedule: Targeted remediation in next session
     # Resolve: Through 2+ successful retrievals
     # Track: Resolution rate over time
-    
+
     return {
         "id": "misc_001",
         "content": "Confused deep work with flow state",
@@ -604,14 +604,14 @@ class Validator:
         # Verify valid transition
         # Ensure data consistency
         # Validate rollback capability
-        
+
     def validate_content(self, original, processed):
         """Ensure verbatim preservation"""
         # Verify exact match or subset
         # Check hash matches
         # Ensure no AI generation
         # Validate citations preserved
-        
+
     def validate_governance(self, state, action):
         """Ensure gates cannot be bypassed"""
         # Check threshold enforcement
@@ -648,7 +648,7 @@ tests/
 # Must-pass test scenarios
 critical_tests = [
     "test_ai_cannot_interact_during_recall",
-    "test_learner_must_author_flashcards", 
+    "test_learner_must_author_flashcards",
     "test_governance_gates_block_when_triggered",
     "test_verbatim_content_preserved_with_hash",
     "test_state_transitions_enforce_prerequisites",
