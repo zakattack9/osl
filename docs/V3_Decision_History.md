@@ -240,3 +240,115 @@ _Archive of all modifications evaluated through the Six-Gate Framework, document
 | **Permanent Notes** | ❌ No generation | Write all notes | Self-explanation |
 | **Curiosity Questions** | ❌ No generation | Generate all questions | Curiosity principle |
 | **Synthesis Essays** | ❌ No generation | Write all essays | Transfer principle |
+
+---
+
+## Version 3.4 - Reconciliation and Specification Clarifications
+
+**AI Boundaries Specification (Accepted v3.4)**
+- Proposed: Create authoritative document for AI interaction timing and limits
+- Gates Analysis:
+  - Gate 1: PASS - Protects retrieval practice and generation effect
+  - Gate 2: PASS - Resolves conflicting guidance across documents
+  - Gate 3: PASS - No workflow interruption
+  - Gate 4: PASS - Prevents harmful AI assistance
+  - Gate 5: PASS - Simple reference document
+  - Gate 6: STRONG PASS - Based on testing effect and generation effect research
+- Decision: Created OSL_AI_Boundaries.md as authoritative specification
+- Lesson: Clear boundaries prevent well-intentioned but harmful AI assistance
+
+**Governance Standards Unification (Accepted v3.4)**
+- Proposed: Single source of truth for all governance thresholds with tuning ranges
+- Gates Analysis:
+  - Gate 1: PASS - Maintains adaptive governance principle
+  - Gate 2: PASS - Eliminates conflicting values across documents
+  - Gate 3: PASS - No workflow changes
+  - Gate 4: PASS - Enables consistent implementation
+  - Gate 5: PASS - Simplifies governance management
+  - Gate 6: PASS - Flexibility within research-backed ranges
+- Decision: Created OSL_Governance_Standards.md with authoritative thresholds and ranges
+- Lesson: Single source of truth with tuning ranges balances consistency and flexibility
+
+**State Schema Authority (Accepted v3.4)**
+- Proposed: Establish Version 3.0 as authoritative state schema
+- Gates Analysis:
+  - Gate 1: PASS - Supports all core principles
+  - Gate 2: PASS - Resolves version conflicts
+  - Gate 3: PASS - Backend structure change only
+  - Gate 4: PASS - Enables reliable state management
+  - Gate 5: PASS - Clear versioning strategy
+  - Gate 6: PASS - Structured data improves reliability
+- Decision: Created OSL_State_Schema.md as authoritative specification
+- Lesson: Explicit versioning prevents state management conflicts
+
+**Flashcard Philosophy Documentation (Accepted v3.4)**
+- Proposed: Document why learner must author all flashcards
+- Gates Analysis:
+  - Gate 1: STRONG PASS - Protects generation effect
+  - Gate 2: PASS - Clarifies automation boundaries
+  - Gate 3: PASS - No workflow change
+  - Gate 4: PASS - Prevents bypassing of learning mechanism
+  - Gate 5: PASS - Educational document
+  - Gate 6: STRONG PASS - Generation effect research conclusive
+- Decision: Created OSL_Flashcard_Philosophy.md to protect generation effect
+- Lesson: Document the "why" to prevent future violations
+
+**Activation Probe Clarification (Accepted v3.4)**
+- Proposed: Distinguish minimal activation probe from full pre-diagnostic quiz
+- Gates Analysis:
+  - Gate 1: PASS - Appropriate activation without premature assessment
+  - Gate 2: PASS - Resolves quiz confusion
+  - Gate 3: PASS - Minimal time investment
+  - Gate 4: PASS - Better ROI than full quiz
+  - Gate 5: PASS - Simpler than full assessment
+  - Gate 6: PASS - Pretesting research supports simple recall only
+- Decision: Created OSL_Activation_Probe.md limiting to 3-item, 90-second probe
+- Lesson: Pretesting works for activation, not complex assessment
+
+**Natural Language Balance (Accepted v3.4)**
+- Proposed: Balance NLP convenience with learner control
+- Gates Analysis:
+  - Gate 1: PASS - Preserves self-explanation and curiosity
+  - Gate 2: PASS - Unique verbatim preservation signal
+  - Gate 3: PASS - Confirmation patterns don't interrupt
+  - Gate 4: PASS - Maintains learner agency
+  - Gate 5: PASS - Three-layer model is simple
+  - Gate 6: PASS - User control improves engagement
+- Decision: Created OSL_Natural_Language_Balance.md with three-layer model
+- Lesson: Convenience features must not override learner intent
+
+**Concept Map Implementation (Accepted v3.4)**
+- Proposed: Specify 5-minute time box and weekly timing
+- Gates Analysis:
+  - Gate 1: PASS - Supports self-explanation and transfer
+  - Gate 2: PASS - Visual learning channel
+  - Gate 3: PASS - End of weekly synthesis
+  - Gate 4: PASS - High-ROI consolidation activity
+  - Gate 5: PASS - Simple time-boxed activity
+  - Gate 6: PASS - Concept mapping research supports post-learning generation
+- Decision: Created OSL_Concept_Map_Implementation.md with 5-minute specification
+- Lesson: Time-boxing prevents perfectionism while ensuring completion
+
+**Interleaving Specification (Accepted v3.4)**
+- Proposed: Define detection algorithm and scheduling flexibility
+- Gates Analysis:
+  - Gate 1: PASS - Supports interleaving principle
+  - Gate 2: PASS - Enables both natural and dedicated sessions
+  - Gate 3: PASS - Flexible scheduling
+  - Gate 4: PASS - Adapts to learner patterns
+  - Gate 5: PASS - Simple detection algorithm
+  - Gate 6: PASS - Interleaving research supports flexibility
+- Decision: Created OSL_Interleaving_Specification.md with detection algorithm
+- Lesson: Support both intentional and natural interleaving patterns
+
+**Master Reference Guide (Accepted v3.4)**
+- Proposed: Create document map for implementation reference
+- Gates Analysis:
+  - Gate 1: PASS - Supports all principles through proper reference
+  - Gate 2: PASS - Unique navigation and context mapping
+  - Gate 3: PASS - Reference document only
+  - Gate 4: PASS - Prevents implementation errors
+  - Gate 5: PASS - Simple reference structure
+  - Gate 6: PASS - Documentation best practices
+- Decision: Created OSL_Master_Reference_Guide.md with implementation context
+- Lesson: Good documentation structure prevents implementation drift

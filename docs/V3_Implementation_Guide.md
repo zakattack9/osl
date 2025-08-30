@@ -39,7 +39,7 @@ artifacts/
 
 ```
 
-**Note:** With the Unified Folder Architecture (Section N), the Obsidian vault is located at `osl/obsidian/`. Point Obsidian to open this folder as your vault.
+**Note:** With the Unified Folder Architecture (Section O), the Obsidian vault is located at `osl/obsidian/`. Point Obsidian to open this folder as your vault.
 
 ### A2. Frontmatter
 
@@ -107,7 +107,7 @@ pages: "" # or locations
 
 ## B) Anki Implementation
 
-**Note:** With the Unified Folder Architecture (Section N), Anki exports are stored in `osl/anki/exports/` for portability and version control.
+**Note:** With the Unified Folder Architecture (Section O), Anki exports are stored in `osl/anki/exports/` for portability and version control.
 
 ### B1. Decking Schemes
 
@@ -397,6 +397,7 @@ LIST FROM "20_synthesis" WHERE week >= dateformat(date(today) - dur(7 days), "yy
 **Optional Pre-Reading Probe (3 items, ≤90s)**
 
 - Simple recall only — prerequisite concepts
+- See OSL_Activation_Probe.md for full specification and rationale
 - No application or transfer items
 - Skip if no clear prerequisites
 
@@ -458,7 +459,7 @@ LIST FROM "20_synthesis" WHERE week >= dateformat(date(today) - dur(7 days), "yy
 
 ## K) Quick Start (Practical)
 
-1) **Follow Section N setup**: Create the unified `osl/` folder structure, point Obsidian to `osl/obsidian/`.
+1) **Follow Section O setup**: Create the unified `osl/` folder structure, point Obsidian to `osl/obsidian/`.
 
 2) **Copy templates** from Section A3-A5 to `osl/obsidian/90_templates/` and create your first **Session Log**.
 
@@ -541,7 +542,7 @@ The OSL system intentionally does not incorporate Kindle highlighting or note-ta
 
 **Core State File (`ai_state/coach_state.json`):**
 
-**Note:** With the Unified Folder Architecture (Section N), all AI state files are centralized in `osl/ai_state/`.
+**Note:** With the Unified Folder Architecture (Section O), all AI state files are centralized in `osl/ai_state/`. The authoritative state schema is defined in OSL_State_Schema.md (Version 3.0).
 
 **Core State File:**
 ```json
@@ -646,11 +647,13 @@ def generate_coach_context():
    - Run `brief_coach.py` to generate context
    - Feed context to Coach AI as initial prompt
    - Coach reviews governance status and prescribes session focus
+   - Check OSL_Governance_Standards.md for current threshold status
 
 2. **During Session:**
    - Log all retrieval attempts and scores in structured format
-   - Track card creation against limits
+   - Track card creation against limits (see OSL_Flashcard_Philosophy.md)
    - Update misconception list in real-time
+   - AI questions only AFTER free recall (see OSL_AI_Boundaries.md)
 
 3. **End of Session:**
    - Run `update_coach_state.sh` to aggregate data
@@ -684,7 +687,30 @@ def generate_coach_context():
 
 ---
 
-## M) OSL Evolution Protocol: The Six-Gate Framework
+## M) Authoritative Specifications Reference
+
+The following documents provide authoritative specifications for OSL implementation. When implementing the CLI tool or any OSL system, these documents supersede any conflicting information:
+
+### Critical Guardrails (Never Violate)
+- **OSL_AI_Boundaries.md** - When and how AI can interact (protects learning mechanisms)
+- **OSL_Flashcard_Philosophy.md** - Why learner must author all cards (protects generation effect)
+- **OSL_Natural_Language_Balance.md** - Preserves user control over interpretation
+
+### Implementation Standards
+- **OSL_Governance_Standards.md** - Authoritative thresholds with tuning ranges
+- **OSL_State_Schema.md** - Version 3.0 authoritative data structures
+- **OSL_Activation_Probe.md** - Pre-reading limited to minimal probe only
+- **OSL_Concept_Map_Implementation.md** - 5-minute weekly concept map specification
+- **OSL_Interleaving_Specification.md** - Detection algorithm and scheduling
+
+### Navigation
+- **OSL_Master_Reference_Guide.md** - Complete document map showing when to reference each specification
+
+These specifications were created through the Six-Gate Framework evaluation process to resolve inconsistencies and protect core learning principles.
+
+---
+
+## N) OSL Evolution Protocol: The Six-Gate Framework
 
 ### Purpose
 Prevents feature creep and ritual accumulation by requiring all proposed additions or modifications to pass systematic evaluation. This framework maintains OSL's focus on evidence-based, high-ROI learning activities.
@@ -836,7 +862,7 @@ Consult the Decision History when:
 
 ---
 
-## N) Unified OSL Folder Architecture
+## O) Unified OSL Folder Architecture
 
 ### Purpose
 Consolidate all OSL-related files into a single, portable, version-controlled folder that serves as:
@@ -1003,7 +1029,7 @@ governance:
 }
 ```
 
-**ai_state/coach_state.json** (initial structure - see Section L3 for full schema):
+**ai_state/coach_state.json** (initial structure - see OSL_State_Schema.md for authoritative schema):
 ```json
 {
   "last_updated": "",

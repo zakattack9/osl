@@ -43,8 +43,8 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 
 ### AI Roles
 - **Extractor**: Provides _cited bullet points and outlines only_ (no free summaries without references).
-- **Tutor**: Runs Socratic Q&A, provides feedback, and validates session completeness (checks for card creation gaps, note quality, and misconception resolution).
-- **Coach**: Maintains spaced review schedule, interleaving plan, and ensures governance rules are adaptive. Uses structured session state files (`coach_state.json`) for continuity between sessions (see Implementation Guide L3 for details).
+- **Tutor**: Runs Socratic Q&A AFTER learner's free recall, provides feedback, and validates session completeness. Generates 2-3 questions per micro-loop targeting the material, not recall quality (see OSL_AI_Boundaries.md for timing restrictions).
+- **Coach**: Maintains spaced review schedule, interleaving plan, and ensures governance rules are adaptive. Uses structured session state files (`coach_state.json`) for continuity between sessions (see OSL_State_Schema.md for authoritative schema).
 
 ---
 
@@ -52,7 +52,7 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 
 - Write **3 outcomes** (e.g., "Explain X to a novice and an expert," "Solve Y problem type," "Apply Z to project A").
 - Identify what you **already know** and list initial **misconceptions** or unknown terms.
-- *(Optional, ≤90s)* Run a **3-item recall probe** on prerequisite ideas (no transfer items).
+- *(Optional, ≤90s)* Run a **3-item recall probe** on prerequisite ideas (no transfer items). This is NOT a full quiz - see OSL_Activation_Probe.md for the minimal probe specification.
 
 ---
 
@@ -94,6 +94,7 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 - Prioritize **application cards** over definitions.
 - Every card must include a **citation/source**.
 - Add new cards only if review load allows.
+- **Critical**: Learner must author all cards to preserve generation effect (see OSL_Flashcard_Philosophy.md).
 
 ---
 
@@ -101,7 +102,7 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 
 - **Spacing Schedule**: 1d → 3d → 7d → 14d → monthly.
 - **Daily reviews**: 10–15 min Anki.
-- **Interleaving**: Mix current, prior, and adjacent domains in 30-50% of sessions.
+- **Interleaving**: Mix current, prior, and adjacent domains in 30-50% of sessions (see OSL_Interleaving_Specification.md for detection algorithm).
 
 ---
 
@@ -110,7 +111,7 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 - **Prediction → Test → Feedback** cycle.
 - Update misconception list; schedule targeted reviews.
 - Write a **1-page synthesis essay** weaving 2–3 concepts into perspective.
-- **Create/update a 1-page concept map of the week's learning** (≤5 minutes).
+- **Create/update a 1-page concept map of the week's learning** (≤5 minutes, see OSL_Concept_Map_Implementation.md).
 
 ---
 
@@ -124,10 +125,11 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 
 ## 12. Adaptive Governance Rules
 
-- **Calibration Gate:** If weekly retrieval < 80%, pause new content until remediation (review, re-explain, re-test).
-- **Card Debt Cap:** If due cards > 2× normal daily throughput, halt new card creation until reviews stabilize.
+- **Calibration Gate:** If weekly retrieval < 80% (tunable 75-85%), pause new content until remediation (review, re-explain, re-test).
+- **Card Debt Cap:** If due cards > 2× normal daily throughput (tunable 1.5×-2.5×), halt new card creation until reviews stabilize.
 - **Flexibility:** Learners can adjust thresholds with Coach guidance to avoid rigidity.
-- **Transfer Proof:** One artifact per month required.
+- **Transfer Proof:** One artifact per book/major topic required.
+- See OSL_Governance_Standards.md for authoritative thresholds and tuning ranges.
 
 ---
 
@@ -174,3 +176,11 @@ _A research-backed, AI-assisted reading and learning process for comprehension, 
 V3 refines OSL by keeping its **retrieval-focused micro-loop** at the center, while simplifying governance, reinforcing guiding questions, and treating genre-specific or skill-lane adjustments as optional. The system balances **structure with adaptability**, making it sustainable and effective for long-term learning.
 
 **Note on System Evolution:** All proposed modifications to OSL must pass the Six-Gate Framework (see Implementation Guide Section M) to prevent feature creep and maintain focus on evidence-based, high-ROI learning activities. This ensures OSL remains lean, effective, and true to its core principles.
+
+**Authoritative Specifications:** Critical aspects of OSL implementation are documented in dedicated specification files:
+- OSL_AI_Boundaries.md - When and how AI can interact
+- OSL_Governance_Standards.md - Authoritative thresholds and ranges
+- OSL_Flashcard_Philosophy.md - Generation effect protection
+- OSL_State_Schema.md - Authoritative data structures
+- OSL_Natural_Language_Balance.md - User control preservation
+See OSL_Master_Reference_Guide.md for complete document map.
